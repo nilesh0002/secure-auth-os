@@ -1,5 +1,8 @@
 # SecureAuthOS
 
+[![CI](https://github.com/nilesh0002/secure-auth-os/actions/workflows/ci.yml/badge.svg)](https://github.com/nilesh0002/secure-auth-os/actions/workflows/ci.yml)
+[![Release](https://github.com/nilesh0002/secure-auth-os/actions/workflows/release.yml/badge.svg)](https://github.com/nilesh0002/secure-auth-os/actions/workflows/release.yml)
+
 SecureAuthOS is a modular authentication service built with FastAPI, SQLAlchemy, Argon2 password hashing, TOTP-based MFA, JWT session handling, RBAC, audit logging, and a Linux-friendly OS-auth abstraction.
 
 ## Features
