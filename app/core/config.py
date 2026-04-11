@@ -1,5 +1,6 @@
 from functools import lru_cache
 import base64
+import os
 import secrets
 
 from pydantic import Field
@@ -11,7 +12,7 @@ class Settings(BaseSettings):
 
     app_name: str = "SecureAuthOS"
     environment: str = "development"
-    database_url: str = "sqlite:///./auth.db"
+    database_url: str = "sqlite:////tmp/auth.db" if os.getenv("VERCEL") else "sqlite:///./auth.db"
     secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(64))
     data_encryption_key: str = Field(
         default_factory=lambda: base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("utf-8")
