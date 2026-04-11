@@ -24,6 +24,18 @@ def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
     app.include_router(auth_router)
 
+    @app.get("/")
+    def root() -> dict[str, str]:
+        return {
+            "service": settings.app_name,
+            "status": "ok",
+            "docs": "/docs",
+        }
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        return {"status": "healthy"}
+
     return app
 
 
