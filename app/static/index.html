@@ -41,6 +41,12 @@
     };
   </script>
   <style>
+    html, body, #root {
+      max-width: 100%;
+      overflow-x: hidden;
+      line-height: 1.45;
+    }
+
     .glass {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.16);
@@ -79,6 +85,21 @@
       to {
         transform: scale(4);
         opacity: 0;
+      }
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.05rem;
+      }
+
+      h2 {
+        font-size: 1rem;
+      }
+
+      .mobile-stack {
+        flex-direction: column;
+        align-items: stretch;
       }
     }
   </style>
@@ -518,17 +539,17 @@
 
       return (
         <div className="mx-auto min-h-screen w-full max-w-md px-4 py-4">
-          <section className="glass relative h-[calc(100vh-2rem)] rounded-[30px] shadow-glow safe-bottom overflow-hidden">
+          <section className="glass relative flex min-h-[calc(100vh-2rem)] flex-col rounded-[30px] shadow-glow overflow-hidden">
             <div className="px-5 pt-6">
-              <div className="flex items-center justify-between">
+              <div className="mobile-stack flex items-center justify-between gap-2">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-300/90">SecureAuthOS</p>
                   <h1 className="mt-1 text-xl font-semibold">Mobile Auth Flow</h1>
                 </div>
-                <div className="flex items-center gap-2">
-                  {isAdmin && <button onClick={openUsersModal} className="rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200">Manage Users</button>}
-                  {tokens.access && <button onClick={onLogout} className="rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200">Logout</button>}
-                  <a href="/docs" className="rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200">API</a>
+                <div className="mobile-stack flex items-center gap-2">
+                  {isAdmin && <button onClick={openUsersModal} className="w-full rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200 sm:w-auto">Admin Panel</button>}
+                  {tokens.access && <button onClick={onLogout} className="w-full rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200 sm:w-auto">Logout</button>}
+                  <a href="/docs" className="w-full rounded-xl border border-white/20 px-3 py-2 text-center text-xs text-slate-200 sm:w-auto">API</a>
                 </div>
               </div>
 
@@ -558,7 +579,7 @@
               )}
             </div>
 
-            <div className="px-5 pt-5 animate-slideIn">
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-4 animate-slideIn">
               {step === 0 && (
                 <div className="space-y-4">
                   <div>
@@ -601,11 +622,11 @@
                   <FloatingInput id="login-user" label="Username" value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} icon="👤" />
                   <FloatingInput id="login-pass" type="password" label="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} icon="🔑" />
                   {login.username.trim().toLowerCase() === "admin" && (
-                    <button onClick={loadAdminAuthenticatorQr} className="rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200" disabled={loadingAdminQr}>
+                    <button onClick={loadAdminAuthenticatorQr} className="w-full rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200" disabled={loadingAdminQr}>
                       {loadingAdminQr ? "Loading Authenticator QR..." : "Show Admin Authenticator QR"}
                     </button>
                   )}
-                  <button onClick={() => setStep(0)} className="rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200">New here? Create Account</button>
+                  <button onClick={() => setStep(0)} className="w-full rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200">New here? Create Account</button>
                 </div>
               )}
 
@@ -655,7 +676,7 @@
               )}
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-slate-950/30 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
+            <div className="mt-auto border-t border-white/10 bg-slate-950/30 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
               <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
                 <button disabled={!prevEnabled} onClick={() => setStep((s) => Math.max(0, s - 1))} className="disabled:opacity-40">Back</button>
                 <span>{steps[step].label}</span>
@@ -664,10 +685,10 @@
             </div>
 
             {showUsersModal && (
-              <div className="absolute inset-0 z-20 grid place-items-center bg-slate-950/70 p-4">
-                <div className="glass w-full max-w-sm rounded-2xl border border-white/20 p-4">
+              <div className="fixed inset-0 z-30 grid place-items-end bg-slate-950/70 p-4 sm:place-items-center">
+                <div className="glass w-full max-w-md rounded-2xl border border-white/20 p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Manage Users</h3>
+                    <h3 className="text-sm font-semibold">Admin Panel</h3>
                     <button onClick={() => setShowUsersModal(false)} className="rounded-lg border border-white/20 px-2 py-1 text-xs">Close</button>
                   </div>
 
@@ -676,13 +697,22 @@
                   ) : usersList.length === 0 ? (
                     <p className="text-xs text-slate-300">No users found.</p>
                   ) : (
-                    <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                    <div className="max-h-[60vh] space-y-2 overflow-auto pr-1">
+                      <div className="grid grid-cols-[1.2fr_1fr_auto] gap-2 rounded-xl border border-white/10 bg-slate-900/30 px-2 py-1 text-[11px] text-slate-300">
+                        <span>Email / Username</span>
+                        <span>User ID</span>
+                        <span>Action</span>
+                      </div>
                       {usersList.map((u) => (
                         <div key={u.id} className="rounded-xl border border-white/15 bg-slate-900/35 p-2.5 text-xs">
-                          <p className="truncate font-semibold text-slate-100">{u.email || u.username}</p>
-                          <p className="truncate text-slate-300">ID: {u.id}</p>
-                          <p className="text-slate-400">Created: {formatDate(u.created_at)}</p>
-                          <button onClick={() => deleteUser(u.id)} className="mt-2 rounded-lg border border-rose-300/40 bg-rose-500/10 px-2 py-1 text-rose-200">Delete</button>
+                          <div className="grid grid-cols-[1.2fr_1fr_auto] items-center gap-2">
+                            <div>
+                              <p className="truncate font-semibold text-slate-100">{u.email || u.username}</p>
+                              <p className="text-[11px] text-slate-400">{formatDate(u.created_at)}</p>
+                            </div>
+                            <p className="truncate text-slate-300">{u.id}</p>
+                            <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-300/40 bg-rose-500/10 px-2 py-1 text-rose-200">Delete</button>
+                          </div>
                         </div>
                       ))}
                     </div>
