@@ -23,11 +23,11 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
-        app.include_router(auth_router, prefix="/api")
+    app.include_router(auth_router, prefix="/api")
 
-        @app.get("/", response_class=HTMLResponse)
-        def root() -> str:
-                return """
+    @app.get("/", response_class=HTMLResponse)
+    def root() -> str:
+        return """
 <!doctype html>
 <html lang=\"en\">
 <head>
