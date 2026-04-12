@@ -290,6 +290,7 @@
       const [mfaSetup, setMfaSetup] = useState({ uri: "", qr: "" });
       const [tokens, setTokens] = useState({ access: "" });
       const [profile, setProfile] = useState(null);
+      const [sessionRole, setSessionRole] = useState("");
       const [verified, setVerified] = useState(false);
       const [showCheck, setShowCheck] = useState(false);
       const [showUsersModal, setShowUsersModal] = useState(false);
@@ -297,7 +298,7 @@
       const [usersLoading, setUsersLoading] = useState(false);
       const [loadingAdminQr, setLoadingAdminQr] = useState(false);
 
-      const isAdmin = profile?.role === "admin";
+      const isAdmin = (sessionRole || profile?.role) === "admin";
 
       const otpCode = otp.join("");
 
@@ -317,6 +318,15 @@
         if (String(d).includes("Username already exists")) return "Username already taken. Try a different one.";
         if (String(d).includes("Email already exists")) return "Email already used. Use plus-tag (name+1@gmail.com).";
         return String(d);
+      };
+
+      const roleFromJwt = (token) => {
+        try {
+          const payload = JSON.parse(atob((token || "").split(".")[1] || ""));
+          return String(payload?.role || "").toLowerCase();
+        } catch {
+          return "";
+        }
       };
 
       const api = async (path, method, body, token) => {
@@ -422,6 +432,7 @@
           const data = await api("/api/verify-mfa", "POST", { mfa_token: mfaToken.trim(), otp: otpCode });
           const accessToken = data.access_token || "";
           setTokens({ access: accessToken });
+          setSessionRole(roleFromJwt(accessToken));
           if (accessToken) {
             const me = await api("/api/me", "GET", null, accessToken);
             setProfile(me);
@@ -469,6 +480,7 @@
         }
         setTokens({ access: "" });
         setProfile(null);
+        setSessionRole("");
         setShowUsersModal(false);
         setUsersList([]);
         setMfaToken("");
@@ -621,6 +633,7 @@
 
                   <FloatingInput id="login-user" label="Username" value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} icon="👤" />
                   <FloatingInput id="login-pass" type="password" label="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} icon="🔑" />
+                  <p className="text-xs text-slate-400">Admin Panel appears after successful admin OTP login.</p>
                   {login.username.trim().toLowerCase() === "admin" && (
                     <button onClick={loadAdminAuthenticatorQr} className="w-full rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200" disabled={loadingAdminQr}>
                       {loadingAdminQr ? "Loading Authenticator QR..." : "Show Admin Authenticator QR"}
