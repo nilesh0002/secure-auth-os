@@ -11,19 +11,30 @@
         extend: {
           colors: {
             accent: "#f4c95d",
-            glass: "rgba(255,255,255,0.07)",
+            glass: "rgba(255,255,255,0.08)",
           },
           boxShadow: {
-            glow: "0 18px 60px rgba(0,0,0,0.42)",
+            glow: "0 24px 70px rgba(0,0,0,0.45)",
           },
           keyframes: {
             fadeUp: {
               "0%": { opacity: "0", transform: "translateY(10px)" },
               "100%": { opacity: "1", transform: "translateY(0)" },
             },
+            slideIn: {
+              "0%": { opacity: "0", transform: "translateX(22px)" },
+              "100%": { opacity: "1", transform: "translateX(0)" },
+            },
+            pop: {
+              "0%": { transform: "scale(0.6)", opacity: "0" },
+              "70%": { transform: "scale(1.08)", opacity: "1" },
+              "100%": { transform: "scale(1)", opacity: "1" },
+            },
           },
           animation: {
             fadeUp: "fadeUp .35s ease-out",
+            slideIn: "slideIn .28s ease-out",
+            pop: "pop .34s ease-out",
           },
         },
       },
@@ -38,9 +49,9 @@
 
     .bg-auth {
       background:
-        radial-gradient(circle at 8% 12%, rgba(244, 201, 93, 0.2), transparent 34%),
-        radial-gradient(circle at 92% 8%, rgba(34, 211, 238, 0.18), transparent 30%),
-        linear-gradient(140deg, #0b1f2d, #0f3b44 55%, #0f2f3b);
+        radial-gradient(circle at 8% 8%, rgba(244, 201, 93, 0.22), transparent 34%),
+        radial-gradient(circle at 92% 10%, rgba(45, 212, 191, 0.18), transparent 30%),
+        linear-gradient(145deg, #081621, #0d2635 52%, #123f49);
     }
 
     input:-webkit-autofill,
@@ -49,6 +60,26 @@
       -webkit-text-fill-color: #e2e8f0;
       transition: background-color 9999s ease-out 0s;
       box-shadow: 0 0 0px 1000px rgba(15, 23, 42, 0.55) inset;
+    }
+
+    .safe-bottom {
+      padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+    }
+
+    .ripple {
+      position: absolute;
+      border-radius: 9999px;
+      transform: scale(0);
+      animation: ripple 600ms linear;
+      background: rgba(255, 255, 255, 0.35);
+      pointer-events: none;
+    }
+
+    @keyframes ripple {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
     }
   </style>
 </head>
@@ -63,9 +94,9 @@
     const { useMemo, useRef, useState } = React;
 
     const steps = [
-      { id: 0, label: "Create Account" },
+      { id: 0, label: "Create" },
       { id: 1, label: "Login" },
-      { id: 2, label: "Verify OTP" },
+      { id: 2, label: "Verify" },
       { id: 3, label: "Profile" },
     ];
 
@@ -75,10 +106,17 @@
       return arr.filter(Boolean).join(" ");
     }
 
-    function FloatingInput({ id, label, type = "text", value, onChange, error }) {
+    function IconWrap({ children }) {
+      return (
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{children}</div>
+      );
+    }
+
+    function FloatingInput({ id, label, type = "text", value, onChange, error, icon }) {
       return (
         <div className="space-y-1">
           <div className="relative">
+            {icon && <IconWrap>{icon}</IconWrap>}
             <input
               id={id}
               type={type}
@@ -86,14 +124,19 @@
               onChange={onChange}
               placeholder=" "
               className={cls(
-                "peer w-full rounded-xl border bg-slate-900/40 px-3 pt-5 pb-2 text-slate-100 outline-none transition",
+                "peer w-full rounded-2xl border bg-slate-900/45 pr-3 pt-5 pb-2 text-slate-100 outline-none transition",
+                icon ? "pl-10" : "pl-3",
                 "border-slate-200/20 focus:border-accent/90 focus:ring-2 focus:ring-accent/20",
                 error && "border-rose-400/70"
               )}
             />
             <label
               htmlFor={id}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 transition-all peer-placeholder-shown:top-1/2 peer-focus:top-3 peer-focus:text-xs peer-focus:text-accent peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs"
+              className={cls(
+                "pointer-events-none absolute top-1/2 -translate-y-1/2 text-sm text-slate-400 transition-all",
+                icon ? "left-10" : "left-3",
+                "peer-placeholder-shown:top-1/2 peer-focus:top-3 peer-focus:text-xs peer-focus:text-accent peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs"
+              )}
             >
               {label}
             </label>
@@ -128,18 +171,41 @@
       );
     }
 
-    function Toasts({ toasts }) {
+    function RippleButton({ label, onClick, disabled, tone = "accent" }) {
+      const btnRef = useRef(null);
+      const classes = tone === "ghost"
+        ? "border border-white/20 bg-white/5 text-slate-200"
+        : "bg-accent text-slate-900";
+
+      const addRipple = (e) => {
+        const btn = btnRef.current;
+        if (!btn) return;
+        const circle = document.createElement("span");
+        const diameter = Math.max(btn.clientWidth, btn.clientHeight);
+        const radius = diameter / 2;
+        circle.style.width = circle.style.height = `${diameter}px`;
+        circle.style.left = `${e.clientX - btn.getBoundingClientRect().left - radius}px`;
+        circle.style.top = `${e.clientY - btn.getBoundingClientRect().top - radius}px`;
+        circle.className = "ripple";
+        const old = btn.getElementsByClassName("ripple")[0];
+        if (old) old.remove();
+        btn.appendChild(circle);
+      };
+
       return (
-        <div className="fixed right-4 top-4 z-50 space-y-2">
-          {toasts.map((t) => (
-            <div key={t.id} className={cls(
-              "glass animate-fadeUp rounded-xl px-4 py-3 text-sm shadow-glow",
-              t.type === "error" ? "border-rose-300/40 text-rose-100" : "border-emerald-300/40 text-emerald-100"
-            )}>
-              {t.message}
-            </div>
-          ))}
-        </div>
+        <button
+          ref={btnRef}
+          disabled={disabled}
+          onMouseDown={addRipple}
+          onClick={onClick}
+          className={cls(
+            "relative overflow-hidden w-full rounded-2xl px-4 py-3.5 font-semibold transition active:scale-[0.99]",
+            classes,
+            "disabled:cursor-not-allowed disabled:opacity-60"
+          )}
+        >
+          {label}
+        </button>
       );
     }
 
@@ -178,7 +244,8 @@
                 onChange={(e) => onChange(i, e.target.value)}
                 onKeyDown={(e) => onKeyDown(i, e)}
                 inputMode="numeric"
-                className="h-12 w-11 rounded-xl border border-slate-300/20 bg-slate-900/40 text-center text-lg tracking-widest outline-none transition focus:border-accent/90 focus:ring-2 focus:ring-accent/25"
+                autoComplete={i === 0 ? "one-time-code" : "off"}
+                className="h-14 w-12 rounded-2xl border border-slate-300/20 bg-slate-900/45 text-center text-xl tracking-widest outline-none transition focus:border-accent/90 focus:ring-2 focus:ring-accent/25"
               />
             ))}
           </div>
@@ -190,8 +257,8 @@
     function App() {
       const [step, setStep] = useState(0);
       const [loading, setLoading] = useState(false);
-      const [toasts, setToasts] = useState([]);
       const [errors, setErrors] = useState({});
+      const [banner, setBanner] = useState({ type: "", text: "" });
 
       const [reg, setReg] = useState({ username: "", email: "", password: "", role: "user" });
       const [login, setLogin] = useState({ username: "", password: "" });
@@ -203,13 +270,18 @@
       const [tokens, setTokens] = useState({ access: "", refresh: "" });
       const [profile, setProfile] = useState(null);
       const [verified, setVerified] = useState(false);
+      const [showCheck, setShowCheck] = useState(false);
 
       const otpCode = otp.join("");
 
-      const pushToast = (message, type = "success") => {
-        const id = Date.now() + Math.random();
-        setToasts((s) => [...s, { id, message, type }]);
-        setTimeout(() => setToasts((s) => s.filter((t) => t.id !== id)), 2600);
+      const pulse = (ok) => {
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          navigator.vibrate(ok ? 25 : [25, 50, 25]);
+        }
+      };
+
+      const showBanner = (text, type = "ok") => {
+        setBanner({ text, type });
       };
 
       const parseError = (err) => {
@@ -235,9 +307,11 @@
         if (!val) return;
         try {
           await navigator.clipboard.writeText(val);
-          pushToast(label + " copied");
+          pulse(true);
+          showBanner(label + " copied", "ok");
         } catch {
-          pushToast("Copy failed", "error");
+          pulse(false);
+          showBanner("Copy failed", "error");
         }
       };
 
@@ -255,9 +329,11 @@
           setMfaSetup({ uri: data.mfa_setup_uri || "", qr: data.qr_code_data_uri || "" });
           setLogin({ username: reg.username.trim(), password: reg.password });
           setStep(1);
-          pushToast("Account created. Scan QR before login.");
+          pulse(true);
+          showBanner("Account created. Scan QR before login.", "ok");
         } catch (err) {
-          pushToast(parseError(err), "error");
+          pulse(false);
+          showBanner(parseError(err), "error");
         } finally {
           setLoading(false);
         }
@@ -265,7 +341,7 @@
 
       const onLogin = async () => {
         if (!login.username.trim() || !login.password) {
-          pushToast("Enter username and password", "error");
+          showBanner("Enter username and password", "error");
           return;
         }
 
@@ -274,9 +350,11 @@
           const data = await api("/api/login", "POST", { username: login.username.trim(), password: login.password });
           setMfaToken(data.mfa_token || "");
           setStep(2);
-          pushToast("Login successful. Enter OTP now.");
+          pulse(true);
+          showBanner("Login successful. Enter OTP now.", "ok");
         } catch (err) {
-          pushToast(parseError(err), "error");
+          pulse(false);
+          showBanner(parseError(err), "error");
         } finally {
           setLoading(false);
         }
@@ -284,11 +362,11 @@
 
       const onVerify = async () => {
         if (!mfaToken.trim()) {
-          pushToast("MFA token missing. Login first.", "error");
+          showBanner("MFA token missing. Login first.", "error");
           return;
         }
         if (otpCode.length !== 6) {
-          pushToast("Enter valid 6-digit OTP.", "error");
+          showBanner("Enter valid 6-digit OTP.", "error");
           return;
         }
 
@@ -297,10 +375,16 @@
           const data = await api("/api/verify-mfa", "POST", { mfa_token: mfaToken.trim(), otp: otpCode });
           setTokens({ access: data.access_token || "", refresh: data.refresh_token || "" });
           setVerified(true);
-          setStep(3);
-          pushToast("MFA verified. Welcome!", "success");
+          setShowCheck(true);
+          pulse(true);
+          showBanner("MFA verified. Welcome!", "ok");
+          setTimeout(() => {
+            setShowCheck(false);
+            setStep(3);
+          }, 650);
         } catch (err) {
-          pushToast(parseError(err), "error");
+          pulse(false);
+          showBanner(parseError(err), "error");
         } finally {
           setLoading(false);
         }
@@ -308,98 +392,90 @@
 
       const onProfile = async () => {
         if (!tokens.access) {
-          pushToast("Access token missing.", "error");
+          showBanner("Access token missing.", "error");
           return;
         }
         try {
           setLoading(true);
           const data = await api("/api/me", "GET", null, tokens.access);
           setProfile(data);
-          pushToast("Profile fetched");
+          pulse(true);
+          showBanner("Profile fetched", "ok");
         } catch (err) {
-          pushToast(parseError(err), "error");
+          pulse(false);
+          showBanner(parseError(err), "error");
         } finally {
           setLoading(false);
         }
       };
 
+      const nextLabel = [
+        loading ? "Creating..." : "Create Account",
+        loading ? "Signing in..." : "Login",
+        loading ? "Verifying..." : "Verify OTP",
+        loading ? "Loading Profile..." : "Get My Profile",
+      ][step];
+
+      const nextAction = [onRegister, onLogin, onVerify, onProfile][step];
+
+      const prevEnabled = step > 0 && !loading && !showCheck;
+
       return (
-        <div className="relative min-h-screen p-4 md:p-8">
-          <Toasts toasts={toasts} />
-
-          <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 lg:grid-cols-2">
-            <section className="glass rounded-3xl p-6 shadow-glow lg:p-10 animate-fadeUp">
-              <div className="mb-8 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-accent text-slate-900 font-extrabold grid place-items-center">S</div>
+        <div className="mx-auto min-h-screen w-full max-w-md px-4 py-4">
+          <section className="glass relative h-[calc(100vh-2rem)] rounded-[30px] shadow-glow safe-bottom overflow-hidden">
+            <div className="px-5 pt-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-semibold tracking-tight">SecureAuthOS</h1>
-                  <p className="text-sm text-slate-300">Enterprise-grade identity for modern teams</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-300/90">SecureAuthOS</p>
+                  <h1 className="mt-1 text-xl font-semibold">Mobile Auth Flow</h1>
                 </div>
+                <a href="/docs" className="rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200">API</a>
               </div>
 
-              <div className="mb-8 rounded-2xl border border-white/20 bg-slate-900/35 p-5">
-                <p className="text-sm text-slate-300 leading-6">
-                  Multi-factor flow protects accounts end-to-end: account setup, credential verification,
-                  OTP challenge, and tokenized access.
-                </p>
+              <div className="mt-5 flex items-center gap-2">
+                {steps.map((s, idx) => (
+                  <div key={s.id} className="flex-1">
+                    <div className={cls(
+                      "h-1.5 rounded-full transition-all",
+                      idx <= step ? "bg-accent" : "bg-white/20"
+                    )}></div>
+                  </div>
+                ))}
               </div>
 
-              <div className="space-y-3 text-sm text-slate-200">
-                <div className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-accent"></span><p>Create your account with strong password rules.</p></div>
-                <div className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-cyan-300"></span><p>Login generates a temporary MFA challenge token.</p></div>
-                <div className="flex items-start gap-3"><span className="mt-1 h-2 w-2 rounded-full bg-emerald-300"></span><p>Authenticator OTP confirms identity before access.</p></div>
+              <div className="mt-3 flex justify-between text-[11px] text-slate-300">
+                <span>Step {step + 1} of 4</span>
+                <span>{steps[step].label}</span>
               </div>
 
-              <div className="mt-8 rounded-2xl border border-white/15 bg-slate-950/30 p-5">
-                <h3 className="font-medium">Need API docs?</h3>
-                <a href="/docs" className="mt-2 inline-block text-sm text-accent hover:underline">Open Swagger /docs</a>
-              </div>
-            </section>
-
-            <section className="glass rounded-3xl p-5 shadow-glow md:p-8 animate-fadeUp">
-              <div className="mb-6">
-                <ol className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                  {steps.map((s, idx) => (
-                    <li key={s.id} className={cls(
-                      "rounded-xl border px-3 py-2 text-xs md:text-sm transition",
-                      step === idx && "border-accent bg-accent/15 text-accent",
-                      step > idx && "border-emerald-400/50 bg-emerald-400/10 text-emerald-200",
-                      step < idx && "border-white/20 bg-slate-900/35 text-slate-300"
-                    )}>
-                      {step > idx ? "✓ " : ""}{s.label}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              {loading && (
-                <div className="mb-4 animate-pulse space-y-2 rounded-xl border border-white/10 bg-slate-900/35 p-4">
-                  <div className="h-3 w-32 rounded bg-slate-600/40"></div>
-                  <div className="h-10 rounded bg-slate-600/30"></div>
+              {banner.text && (
+                <div className={cls(
+                  "mt-4 rounded-xl border px-3 py-2 text-xs animate-fadeUp",
+                  banner.type === "error" ? "border-rose-300/40 bg-rose-500/10 text-rose-200" : "border-emerald-300/40 bg-emerald-500/10 text-emerald-200"
+                )}>
+                  {banner.text}
                 </div>
               )}
+            </div>
 
+            <div className="px-5 pt-5 animate-slideIn">
               {step === 0 && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-semibold">Create your account</h2>
-                    <p className="text-sm text-slate-300">Start secure onboarding with password policy + MFA.</p>
+                    <h2 className="text-lg font-semibold">Create Account</h2>
+                    <p className="text-sm text-slate-300">Set up account + MFA in one smooth flow.</p>
                   </div>
 
-                  <FloatingInput id="reg-user" label="Username" value={reg.username} onChange={(e) => setReg({ ...reg, username: e.target.value })} error={errors.username} />
-                  <FloatingInput id="reg-email" label="Email" value={reg.email} onChange={(e) => setReg({ ...reg, email: e.target.value })} error={errors.email} />
-                  <FloatingInput id="reg-pass" type="password" label="Password" value={reg.password} onChange={(e) => setReg({ ...reg, password: e.target.value })} error={errors.password} />
+                  <FloatingInput id="reg-user" label="Username" value={reg.username} onChange={(e) => setReg({ ...reg, username: e.target.value })} error={errors.username} icon="👤" />
+                  <FloatingInput id="reg-email" label="Email" value={reg.email} onChange={(e) => setReg({ ...reg, email: e.target.value })} error={errors.email} icon="✉" />
+                  <FloatingInput id="reg-pass" type="password" label="Password" value={reg.password} onChange={(e) => setReg({ ...reg, password: e.target.value })} error={errors.password} icon="🔒" />
                   <PasswordStrength password={reg.password} />
 
-                  <button onClick={onRegister} disabled={loading} className="w-full rounded-xl bg-accent px-4 py-3 font-semibold text-slate-900 transition hover:brightness-105 disabled:opacity-60">
-                    {loading ? "Creating..." : "Create Account"}
-                  </button>
-
                   {!!mfaSetup.qr && (
-                    <div className="space-y-3 rounded-2xl border border-white/15 bg-slate-900/40 p-4">
-                      <p className="text-sm">Scan this QR in Authenticator app:</p>
-                      <img src={mfaSetup.qr} alt="MFA QR" className="w-52 rounded-xl bg-white p-2" />
-                      <a href={mfaSetup.uri} className="inline-block rounded-lg border border-accent/60 px-3 py-2 text-sm text-accent hover:bg-accent/10">Open Authenticator Link</a>
+                    <div className="space-y-2 rounded-2xl border border-white/15 bg-slate-900/40 p-3">
+                      <p className="text-xs text-slate-300">Scan this QR in Authenticator:</p>
+                      <img src={mfaSetup.qr} alt="MFA QR" className="mx-auto w-44 rounded-xl bg-white p-2" />
+                      <a href={mfaSetup.uri} className="block rounded-xl border border-accent/60 px-3 py-2 text-center text-sm text-accent">Open Authenticator</a>
                     </div>
                   )}
                 </div>
@@ -408,86 +484,75 @@
               {step === 1 && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-semibold">Login</h2>
-                    <p className="text-sm text-slate-300">Enter account credentials to receive MFA challenge.</p>
+                    <h2 className="text-lg font-semibold">Login</h2>
+                    <p className="text-sm text-slate-300">Use your account to request OTP challenge.</p>
                   </div>
-
-                  <FloatingInput id="login-user" label="Username" value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} />
-                  <FloatingInput id="login-pass" type="password" label="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} />
-
-                  <button onClick={onLogin} disabled={loading} className="w-full rounded-xl bg-accent px-4 py-3 font-semibold text-slate-900 transition hover:brightness-105 disabled:opacity-60">
-                    {loading ? "Signing in..." : "Login"}
-                  </button>
+                  <FloatingInput id="login-user" label="Username" value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} icon="👤" />
+                  <FloatingInput id="login-pass" type="password" label="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} icon="🔑" />
                 </div>
               )}
 
               {step === 2 && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-semibold">Verify OTP</h2>
-                    <p className="text-sm text-slate-300">Enter your 6-digit authenticator code.</p>
+                    <h2 className="text-lg font-semibold">Verify OTP</h2>
+                    <p className="text-sm text-slate-300">Enter 6-digit code from authenticator app.</p>
                   </div>
 
-                  <div className="rounded-xl border border-white/15 bg-slate-900/40 p-3">
-                    <label className="mb-2 block text-xs text-slate-300">MFA token</label>
-                    <div className="flex items-center gap-2">
-                      <textarea value={mfaToken} onChange={(e) => setMfaToken(e.target.value)} rows="2" className="w-full rounded-lg border border-slate-300/20 bg-slate-950/50 p-2 text-xs outline-none" />
-                      <button onClick={() => copy(mfaToken, "MFA token")} className="rounded-lg border border-white/20 px-3 py-2 text-xs hover:bg-white/10">Copy</button>
-                    </div>
+                  <div className="rounded-2xl border border-white/15 bg-slate-900/40 p-3">
+                    <label className="mb-1 block text-xs text-slate-300">MFA Token</label>
+                    <textarea value={mfaToken} onChange={(e) => setMfaToken(e.target.value)} rows="2" className="w-full rounded-xl border border-slate-300/20 bg-slate-950/50 p-2 text-xs outline-none" />
+                    <button onClick={() => copy(mfaToken, "MFA token")} className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 text-xs">Copy token</button>
                   </div>
 
                   <OtpSlots values={otp} setValues={setOtp} />
 
-                  <button onClick={onVerify} disabled={loading} className="w-full rounded-xl bg-accent px-4 py-3 font-semibold text-slate-900 transition hover:brightness-105 disabled:opacity-60">
-                    {loading ? "Verifying..." : "Verify Code"}
-                  </button>
+                  {showCheck && (
+                    <div className="rounded-2xl border border-emerald-300/50 bg-emerald-500/10 p-4 text-center animate-pop">
+                      <div className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full bg-emerald-400/20 text-2xl text-emerald-200">✓</div>
+                      <p className="text-sm text-emerald-200">Verified successfully</p>
+                    </div>
+                  )}
                 </div>
               )}
 
               {step === 3 && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-semibold">Profile & Tokens</h2>
-                    <p className="text-sm text-slate-300">You are authenticated. Fetch profile or copy tokens.</p>
+                    <h2 className="text-lg font-semibold">Profile Access</h2>
+                    <p className="text-sm text-slate-300">Copy tokens or fetch profile securely.</p>
                   </div>
 
-                  {verified && (
-                    <div className="relative overflow-hidden rounded-xl border border-emerald-300/40 bg-emerald-500/10 p-4">
-                      <div className="absolute -right-2 -top-2 h-14 w-14 animate-ping rounded-full bg-emerald-300/20"></div>
-                      <p className="font-medium text-emerald-200">Verification successful</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-3 rounded-xl border border-white/15 bg-slate-900/40 p-3">
+                  <div className="space-y-3 rounded-2xl border border-white/15 bg-slate-900/40 p-3">
                     <div>
                       <label className="text-xs text-slate-300">Access token</label>
-                      <div className="mt-1 flex gap-2">
-                        <textarea value={tokens.access} readOnly rows="2" className="w-full rounded-lg border border-slate-300/20 bg-slate-950/50 p-2 text-xs" />
-                        <button onClick={() => copy(tokens.access, "Access token")} className="rounded-lg border border-white/20 px-3 py-2 text-xs hover:bg-white/10">Copy</button>
-                      </div>
+                      <textarea value={tokens.access} readOnly rows="2" className="mt-1 w-full rounded-xl border border-slate-300/20 bg-slate-950/50 p-2 text-xs" />
+                      <button onClick={() => copy(tokens.access, "Access token")} className="mt-1 rounded-lg border border-white/20 px-3 py-1.5 text-xs">Copy access</button>
                     </div>
                     <div>
                       <label className="text-xs text-slate-300">Refresh token</label>
-                      <div className="mt-1 flex gap-2">
-                        <textarea value={tokens.refresh} readOnly rows="2" className="w-full rounded-lg border border-slate-300/20 bg-slate-950/50 p-2 text-xs" />
-                        <button onClick={() => copy(tokens.refresh, "Refresh token")} className="rounded-lg border border-white/20 px-3 py-2 text-xs hover:bg-white/10">Copy</button>
-                      </div>
+                      <textarea value={tokens.refresh} readOnly rows="2" className="mt-1 w-full rounded-xl border border-slate-300/20 bg-slate-950/50 p-2 text-xs" />
+                      <button onClick={() => copy(tokens.refresh, "Refresh token")} className="mt-1 rounded-lg border border-white/20 px-3 py-1.5 text-xs">Copy refresh</button>
                     </div>
                   </div>
 
-                  <button onClick={onProfile} disabled={loading} className="w-full rounded-xl bg-accent px-4 py-3 font-semibold text-slate-900 transition hover:brightness-105 disabled:opacity-60">
-                    {loading ? "Loading profile..." : "Get My Profile"}
-                  </button>
-
                   {profile && (
-                    <pre className="max-h-56 overflow-auto rounded-xl border border-white/15 bg-slate-900/50 p-3 text-xs text-slate-100">
+                    <pre className="max-h-44 overflow-auto rounded-2xl border border-white/15 bg-slate-900/40 p-3 text-xs">
                       {JSON.stringify(profile, null, 2)}
                     </pre>
                   )}
                 </div>
               )}
-            </section>
-          </div>
+            </div>
+
+            <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-slate-950/30 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
+                <button disabled={!prevEnabled} onClick={() => setStep((s) => Math.max(0, s - 1))} className="disabled:opacity-40">Back</button>
+                <span>{steps[step].label}</span>
+              </div>
+              <RippleButton label={nextLabel} onClick={nextAction} disabled={loading || showCheck} />
+            </div>
+          </section>
         </div>
       );
     }
