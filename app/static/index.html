@@ -524,15 +524,26 @@
 
       const deleteUser = async (userId) => {
         if (!tokens.access || !userId) return;
-        // UI interaction: confirm before delete to prevent accidental removal.
-        const confirmed = window.confirm("Delete this user? This action cannot be undone.");
+        // UI interaction: confirm before deactivation to prevent accidental lockout.
+        const confirmed = window.confirm("Deactivate this user?");
         if (!confirmed) return;
 
         try {
           await api(`/api/users/${userId}`, "DELETE", null, tokens.access);
-          // UI interaction: remove deleted user instantly without page reload.
-          setUsersList((prev) => prev.filter((u) => u.id !== userId));
-          showBanner("User deleted", "ok");
+          // UI interaction: update status instantly without page reload.
+          setUsersList((prev) => prev.map((u) => (u.id === userId ? { ...u, is_active: false } : u)));
+          showBanner("User deactivated", "ok");
+        } catch (err) {
+          showBanner(parseError(err), "error");
+        }
+      };
+
+      const restoreUser = async (userId) => {
+        if (!tokens.access || !userId) return;
+        try {
+          await api(`/api/users/${userId}/restore`, "POST", null, tokens.access);
+          setUsersList((prev) => prev.map((u) => (u.id === userId ? { ...u, is_active: true } : u)));
+          showBanner("User restored", "ok");
         } catch (err) {
           showBanner(parseError(err), "error");
         }
@@ -727,10 +738,14 @@
                           <div className="grid grid-cols-[1.2fr_1fr_auto] items-center gap-2">
                             <div>
                               <p className="truncate font-semibold text-slate-100">{u.email || u.username}</p>
-                              <p className="text-[11px] text-slate-400">{formatDate(u.created_at)}</p>
+                              <p className="text-[11px] text-slate-400">{formatDate(u.created_at)} · {u.is_active ? "Active" : "Deactivated"}</p>
                             </div>
                             <p className="truncate text-slate-300">{u.id}</p>
-                            <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-300/40 bg-rose-500/10 px-2 py-1 text-rose-200">Delete</button>
+                            {u.is_active ? (
+                              <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-300/40 bg-rose-500/10 px-2 py-1 text-rose-200">Deactivate</button>
+                            ) : (
+                              <button onClick={() => restoreUser(u.id)} className="rounded-lg border border-emerald-300/40 bg-emerald-500/10 px-2 py-1 text-emerald-200">Restore</button>
+                            )}
                           </div>
                         </div>
                       ))}

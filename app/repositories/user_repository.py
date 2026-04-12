@@ -33,8 +33,8 @@ class UserRepository(BaseRepository):
         statement = select(User).order_by(User.created_at.desc())
         return list(self.db.execute(statement).scalars().all())
 
-    def delete(self, user: User) -> None:
-        self.db.delete(user)
+    def set_active(self, user: User, is_active: bool) -> None:
+        user.is_active = is_active
         self.db.flush()
 
     def add_password_history(self, user_id: str, password_hash: str) -> PasswordHistory:

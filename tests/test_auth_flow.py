@@ -137,7 +137,7 @@ def test_change_password_and_reuse_block(client):
     assert reuse_response.status_code == 400
 
 
-def test_admin_can_list_and_delete_user_then_email_can_be_reused(client):
+def test_admin_can_deactivate_and_restore_user(client):
     target_username, target_email = _unique_user("target")
     target_password = _strong_password()
 
@@ -157,14 +157,17 @@ def test_admin_can_list_and_delete_user_then_email_can_be_reused(client):
     target_user = next((u for u in users if u["username"] == target_username), None)
     assert target_user is not None
 
-    delete_response = client.delete(f"/api/users/{target_user['id']}", headers={"Authorization": f"Bearer {admin_access}"})
-    assert delete_response.status_code == 200
+    deactivate_response = client.delete(f"/api/users/{target_user['id']}", headers={"Authorization": f"Bearer {admin_access}"})
+    assert deactivate_response.status_code == 200
 
     deleted_user_login = client.post("/api/login", json={"username": target_username, "password": target_password})
     assert deleted_user_login.status_code == 401
 
-    reuse_response = _register(client, "recreated_user", target_email, _strong_password(), "user")
-    assert reuse_response.status_code == 200
+    restore_response = client.post(f"/api/users/{target_user['id']}/restore", headers={"Authorization": f"Bearer {admin_access}"})
+    assert restore_response.status_code == 200
+
+    restored_user_login = client.post("/api/login", json={"username": target_username, "password": target_password})
+    assert restored_user_login.status_code == 200
 
 
 def test_non_admin_cannot_access_user_management(client):
@@ -187,6 +190,19 @@ def test_delete_user_not_found_returns_404(client):
 
     response = client.delete("/api/users/does-not-exist", headers={"Authorization": f"Bearer {admin_access}"})
     assert response.status_code == 404
+
+
+def test_admin_cannot_deactivate_admin_or_self(client):
+    admin_login = client.post("/api/login", json={"username": BOOTSTRAP_ADMIN_USERNAME, "password": BOOTSTRAP_ADMIN_PASSWORD})
+    admin_verify = client.post(
+        "/api/verify-mfa",
+        json={"mfa_token": admin_login.json()["mfa_token"], "otp": pyotp.TOTP(BOOTSTRAP_ADMIN_TOTP_SECRET).now()},
+    )
+    admin_access = admin_verify.json()["access_token"]
+    me = client.get("/api/me", headers={"Authorization": f"Bearer {admin_access}"}).json()
+
+    self_deactivate = client.delete(f"/api/users/{me['id']}", headers={"Authorization": f"Bearer {admin_access}"})
+    assert self_deactivate.status_code == 400
 
 
 def test_public_registration_cannot_create_admin_role(client):

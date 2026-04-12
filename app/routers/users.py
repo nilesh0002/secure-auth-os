@@ -21,18 +21,39 @@ def list_users(db: Session = Depends(get_db), _=Depends(require_role(UserRole.ad
 
 
 @router.delete("/users/{user_id}")
-def delete_user(user_id: str, db: Session = Depends(get_db), _=Depends(require_role(UserRole.admin.value))):
-    # Delete the user and commit in one transaction so login and token checks stop working for that identity.
+def delete_user(user_id: str, db: Session = Depends(get_db), admin=Depends(require_role(UserRole.admin.value))):
+    # Soft-deactivate user so login is blocked while keeping data available for restore.
+    users = UserRepository(db)
+    user = users.get_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.role == UserRole.admin.value:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot deactivate admin account")
+    if user.id == admin.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot deactivate your own account")
+
+    try:
+        users.set_active(user, False)
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to deactivate user") from exc
+
+    return {"detail": "User deactivated"}
+
+
+@router.post("/users/{user_id}/restore")
+def restore_user(user_id: str, db: Session = Depends(get_db), _=Depends(require_role(UserRole.admin.value))):
     users = UserRepository(db)
     user = users.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     try:
-        users.delete(user)
+        users.set_active(user, True)
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete user") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to restore user") from exc
 
-    return {"detail": "User deleted"}
+    return {"detail": "User restored"}
