@@ -4,10 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.security import build_totp_uri, decrypt_secret, password_matches_hash, qr_code_data_uri
 from app.core.dependencies import get_current_user, require_role
 from app.db.session import get_db
 from app.models.enums import UserRole
+from app.repositories.user_repository import UserRepository
 from app.schemas.auth import (
+    BootstrapAdminMfaRequest,
+    BootstrapAdminMfaResponse,
     ChangePasswordRequest,
     LoginRequest,
     LogoutRequest,
@@ -56,6 +60,26 @@ def login(payload: LoginRequest, request: Request, service: AuthService = Depend
         user_agent=request.headers.get("user-agent"),
     )
     return PendingMfaResponse(mfa_token=result.mfa_token)
+
+
+@router.post("/bootstrap-admin/mfa-setup", response_model=BootstrapAdminMfaResponse)
+def bootstrap_admin_mfa_setup(payload: BootstrapAdminMfaRequest, db: Session = Depends(get_db)):
+    # Provides admin authenticator QR only after credential verification.
+    settings = get_settings()
+    if not settings.bootstrap_admin_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    if payload.username.strip().lower() != settings.bootstrap_admin_username.lower():
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+
+    user = UserRepository(db).get_by_username(settings.bootstrap_admin_username)
+    if not user or not password_matches_hash(payload.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if user.role != UserRole.admin.value or not user.mfa_secret_encrypted:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin MFA setup unavailable")
+
+    secret = decrypt_secret(user.mfa_secret_encrypted, settings)
+    uri = build_totp_uri(user.username, secret, settings.totp_issuer)
+    return BootstrapAdminMfaResponse(mfa_setup_uri=uri, qr_code_data_uri=qr_code_data_uri(uri))
 
 
 @router.post("/verify-mfa", response_model=TokenResponse)

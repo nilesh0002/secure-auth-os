@@ -56,3 +56,13 @@ class LogoutRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(min_length=1, max_length=128)
     new_password: str = Field(min_length=1, max_length=128)
+
+
+class BootstrapAdminMfaRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=64)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class BootstrapAdminMfaResponse(BaseModel):
+    mfa_setup_uri: str
+    qr_code_data_uri: str

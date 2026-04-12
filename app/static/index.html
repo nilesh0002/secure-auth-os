@@ -274,6 +274,7 @@
       const [showUsersModal, setShowUsersModal] = useState(false);
       const [usersList, setUsersList] = useState([]);
       const [usersLoading, setUsersLoading] = useState(false);
+      const [loadingAdminQr, setLoadingAdminQr] = useState(false);
 
       const isAdmin = profile?.role === "admin";
 
@@ -362,6 +363,26 @@
           showBanner(parseError(err), "error");
         } finally {
           setLoading(false);
+        }
+      };
+
+      const loadAdminAuthenticatorQr = async () => {
+        if (!login.username.trim() || !login.password) {
+          showBanner("Enter admin username and password first.", "error");
+          return;
+        }
+        try {
+          setLoadingAdminQr(true);
+          const data = await api("/api/bootstrap-admin/mfa-setup", "POST", {
+            username: login.username.trim(),
+            password: login.password,
+          });
+          setMfaSetup({ uri: data.mfa_setup_uri || "", qr: data.qr_code_data_uri || "" });
+          showBanner("Authenticator QR loaded.", "ok");
+        } catch (err) {
+          showBanner(parseError(err), "error");
+        } finally {
+          setLoadingAdminQr(false);
         }
       };
 
@@ -579,6 +600,11 @@
 
                   <FloatingInput id="login-user" label="Username" value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} icon="👤" />
                   <FloatingInput id="login-pass" type="password" label="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} icon="🔑" />
+                  {login.username.trim().toLowerCase() === "admin" && (
+                    <button onClick={loadAdminAuthenticatorQr} className="rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200" disabled={loadingAdminQr}>
+                      {loadingAdminQr ? "Loading Authenticator QR..." : "Show Admin Authenticator QR"}
+                    </button>
+                  )}
                   <button onClick={() => setStep(0)} className="rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200">New here? Create Account</button>
                 </div>
               )}

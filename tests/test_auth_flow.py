@@ -193,3 +193,14 @@ def test_public_registration_cannot_create_admin_role(client):
     username, email = _unique_user("blockedadmin")
     response = _register(client, username, email, _strong_password(), "admin")
     assert response.status_code == 403
+
+
+def test_bootstrap_admin_mfa_setup_endpoint_returns_qr(client):
+    response = client.post(
+        "/api/bootstrap-admin/mfa-setup",
+        json={"username": BOOTSTRAP_ADMIN_USERNAME, "password": BOOTSTRAP_ADMIN_PASSWORD},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["mfa_setup_uri"].startswith("otpauth://")
+    assert payload["qr_code_data_uri"].startswith("data:image/png;base64,")
