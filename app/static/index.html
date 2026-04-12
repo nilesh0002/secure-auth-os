@@ -197,6 +197,26 @@
   <script>
     let refreshToken = "";
 
+    function parseError(err) {
+      const detail = err && err.data && err.data.detail ? String(err.data.detail) : "";
+      if (detail.includes("Username already exists")) {
+        return "This username is already used. Try a different username.";
+      }
+      if (detail.includes("Email already exists")) {
+        return "This email is already registered. Use another email or login.";
+      }
+      if (detail.includes("Password must be at least 12 characters")) {
+        return "Password must be 12+ chars with uppercase, lowercase, number, and symbol.";
+      }
+      if (detail) {
+        return detail;
+      }
+      if (err && err.status) {
+        return "Request failed with status " + err.status + ".";
+      }
+      return "Something went wrong. Please try again.";
+    }
+
     function setResult(ok, title, data) {
       const msg = document.getElementById("msg");
       const out = document.getElementById("out");
@@ -236,12 +256,18 @@
           password: document.getElementById("regPassword").value,
           role: "user"
         };
+
+        if (!payload.username || !payload.email || !payload.password) {
+          setResult(false, "Register failed", "Please fill username, email, and password.");
+          return;
+        }
+
         const data = await api("/api/register", "POST", payload);
         setResult(true, "Account created. Add MFA using mfa_setup_uri.", data);
         document.getElementById("loginUsername").value = payload.username;
         document.getElementById("loginPassword").value = payload.password;
       } catch (err) {
-        setResult(false, "Register failed", err);
+        setResult(false, "Register failed", parseError(err));
       }
     });
 
@@ -251,11 +277,17 @@
           username: document.getElementById("loginUsername").value.trim(),
           password: document.getElementById("loginPassword").value
         };
+
+        if (!payload.username || !payload.password) {
+          setResult(false, "Login failed", "Please enter username and password.");
+          return;
+        }
+
         const data = await api("/api/login", "POST", payload);
         document.getElementById("mfaToken").value = data.mfa_token || "";
         setResult(true, "Login OK. Enter OTP now.", data);
       } catch (err) {
-        setResult(false, "Login failed", err);
+        setResult(false, "Login failed", parseError(err));
       }
     });
 
@@ -265,22 +297,32 @@
           mfa_token: document.getElementById("mfaToken").value.trim(),
           otp: document.getElementById("otpCode").value.trim()
         };
+
+        if (!payload.mfa_token || !payload.otp) {
+          setResult(false, "Verify failed", "Please provide MFA token and 6-digit OTP.");
+          return;
+        }
+
         const data = await api("/api/verify-mfa", "POST", payload);
         document.getElementById("accessToken").value = data.access_token || "";
         refreshToken = data.refresh_token || "";
         setResult(true, "Verification success. You are logged in.", data);
       } catch (err) {
-        setResult(false, "Verify failed", err);
+        setResult(false, "Verify failed", parseError(err));
       }
     });
 
     document.getElementById("meBtn").addEventListener("click", async () => {
       try {
         const token = document.getElementById("accessToken").value.trim();
+        if (!token) {
+          setResult(false, "Profile request failed", "Access token missing. Complete verify step first.");
+          return;
+        }
         const data = await api("/api/me", "GET", null, token);
         setResult(true, "Profile fetched.", data);
       } catch (err) {
-        setResult(false, "Profile request failed", err);
+        setResult(false, "Profile request failed", parseError(err));
       }
     });
   </script>
