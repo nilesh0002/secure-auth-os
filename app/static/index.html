@@ -524,6 +524,11 @@
 
       const deleteUser = async (userId) => {
         if (!tokens.access || !userId) return;
+        const target = usersList.find((u) => u.id === userId);
+        if (target && target.role === "admin") {
+          showBanner("Admin cannot be removed", "error");
+          return;
+        }
         // UI interaction: confirm before deactivation to prevent accidental lockout.
         const confirmed = window.confirm("Deactivate this user?");
         if (!confirmed) return;
@@ -741,7 +746,9 @@
                               <p className="text-[11px] text-slate-400">{formatDate(u.created_at)} · {u.is_active ? "Active" : "Deactivated"}</p>
                             </div>
                             <p className="truncate text-slate-300">{u.id}</p>
-                            {u.is_active ? (
+                            {u.role === "admin" ? (
+                              <span className="rounded-lg border border-amber-300/40 bg-amber-500/10 px-2 py-1 text-amber-200">Protected</span>
+                            ) : u.is_active ? (
                               <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-300/40 bg-rose-500/10 px-2 py-1 text-rose-200">Deactivate</button>
                             ) : (
                               <button onClick={() => restoreUser(u.id)} className="rounded-lg border border-emerald-300/40 bg-emerald-500/10 px-2 py-1 text-emerald-200">Restore</button>

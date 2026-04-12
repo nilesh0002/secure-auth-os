@@ -15,9 +15,9 @@ router = APIRouter()
 
 @router.get("/users", response_model=list[UserManagementRead])
 def list_users(db: Session = Depends(get_db), _=Depends(require_role(UserRole.admin.value))):
-    # Admin-only endpoint that returns all users for management workflows.
+    # Admin-only endpoint that returns manageable users (admin account is hidden/protected).
     users = UserRepository(db).list_all()
-    return [UserManagementRead.model_validate(user, from_attributes=True) for user in users]
+    return [UserManagementRead.model_validate(user, from_attributes=True) for user in users if user.role != UserRole.admin.value]
 
 
 @router.delete("/users/{user_id}")
@@ -28,7 +28,7 @@ def delete_user(user_id: str, db: Session = Depends(get_db), admin=Depends(requi
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     if user.role == UserRole.admin.value:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot deactivate admin account")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin is protected and cannot be deleted")
     if user.id == admin.id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot deactivate your own account")
 
@@ -48,6 +48,8 @@ def restore_user(user_id: str, db: Session = Depends(get_db), _=Depends(require_
     user = users.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.role == UserRole.admin.value:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin account is immutable")
 
     try:
         users.set_active(user, True)

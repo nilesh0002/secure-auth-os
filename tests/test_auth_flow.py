@@ -154,6 +154,7 @@ def test_admin_can_deactivate_and_restore_user(client):
     users_response = client.get("/api/users", headers={"Authorization": f"Bearer {admin_access}"})
     assert users_response.status_code == 200
     users = users_response.json()
+    assert all(u["role"] != "admin" for u in users)
     target_user = next((u for u in users if u["username"] == target_username), None)
     assert target_user is not None
 
@@ -202,7 +203,24 @@ def test_admin_cannot_deactivate_admin_or_self(client):
     me = client.get("/api/me", headers={"Authorization": f"Bearer {admin_access}"}).json()
 
     self_deactivate = client.delete(f"/api/users/{me['id']}", headers={"Authorization": f"Bearer {admin_access}"})
-    assert self_deactivate.status_code == 400
+    assert self_deactivate.status_code == 403
+    assert self_deactivate.json()["detail"] == "Admin is protected and cannot be deleted"
+
+
+def test_admin_password_change_is_blocked(client):
+    admin_login = client.post("/api/login", json={"username": BOOTSTRAP_ADMIN_USERNAME, "password": BOOTSTRAP_ADMIN_PASSWORD})
+    admin_verify = client.post(
+        "/api/verify-mfa",
+        json={"mfa_token": admin_login.json()["mfa_token"], "otp": pyotp.TOTP(BOOTSTRAP_ADMIN_TOTP_SECRET).now()},
+    )
+    admin_access = admin_verify.json()["access_token"]
+
+    response = client.post(
+        "/api/change-password",
+        json={"current_password": BOOTSTRAP_ADMIN_PASSWORD, "new_password": "AdminNew!123"},
+        headers={"Authorization": f"Bearer {admin_access}"},
+    )
+    assert response.status_code == 403
 
 
 def test_public_registration_cannot_create_admin_role(client):
