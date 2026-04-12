@@ -73,6 +73,7 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 - `POST /api/register`
 - `POST /api/login`
 - `POST /api/verify-mfa`
+- `POST /api/change-password`
 - `POST /api/refresh`
 - `POST /api/logout`
 - `GET /api/me`

@@ -8,6 +8,7 @@ from app.core.dependencies import get_current_user, require_role
 from app.db.session import get_db
 from app.models.enums import UserRole
 from app.schemas.auth import (
+    ChangePasswordRequest,
     LoginRequest,
     LogoutRequest,
     MfaVerifyRequest,
@@ -82,6 +83,17 @@ def refresh(payload: RefreshRequest, request: Request, service: AuthService = De
 def logout(payload: LogoutRequest, request: Request, service: AuthService = Depends(_service)):
     service.logout(payload.refresh_token, ip_address=request.client.host if request.client else None)
     return {"detail": "Logged out"}
+
+
+@router.post("/change-password")
+def change_password(payload: ChangePasswordRequest, request: Request, user=Depends(get_current_user), service: AuthService = Depends(_service)):
+    service.change_password(
+        user_id=user.id,
+        current_password=payload.current_password,
+        new_password=payload.new_password,
+        ip_address=request.client.host if request.client else None,
+    )
+    return {"detail": "Password changed successfully"}
 
 
 @router.get("/me", response_model=UserRead)

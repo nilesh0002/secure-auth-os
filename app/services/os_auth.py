@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from app.core.config import Settings
+
 
 class OSAuthProvider(ABC):
     @abstractmethod
@@ -24,3 +26,10 @@ class LinuxPamAuthProvider(OSAuthProvider):
 
     def authenticate(self, username: str, password: str) -> bool:
         return bool(self._pam.pam().authenticate(username, password))
+
+
+def get_os_auth_provider(settings: Settings) -> OSAuthProvider:
+    backend = settings.auth_backend.strip().lower()
+    if backend == "pam":
+        return LinuxPamAuthProvider()
+    return LocalAuthProvider()

@@ -82,3 +82,36 @@ def test_user_cannot_access_admin_route(client):
 
     admin_response = client.get("/api/admin/health", headers={"Authorization": f"Bearer {access_token}"})
     assert admin_response.status_code == 403
+
+
+def test_change_password_and_reuse_block(client):
+    username, email = _unique_user("changepw")
+    original_password = _strong_password()
+    new_password = "NewStrong!567"
+
+    register_response = client.post(
+        "/api/register",
+        json={"username": username, "email": email, "password": original_password, "role": "user"},
+    )
+    otp = _otp_from_uri(register_response.json()["mfa_setup_uri"])
+
+    login_response = client.post("/api/login", json={"username": username, "password": original_password})
+    verify_response = client.post(
+        "/api/verify-mfa",
+        json={"mfa_token": login_response.json()["mfa_token"], "otp": otp},
+    )
+    access_token = verify_response.json()["access_token"]
+
+    change_response = client.post(
+        "/api/change-password",
+        json={"current_password": original_password, "new_password": new_password},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert change_response.status_code == 200
+
+    reuse_response = client.post(
+        "/api/change-password",
+        json={"current_password": new_password, "new_password": original_password},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert reuse_response.status_code == 400

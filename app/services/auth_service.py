@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.core.security import decode_token, hash_password, password_matches_hash
+from app.core.security import decode_token, hash_password, password_matches_hash, sha256_hex
 from app.models.enums import UserRole
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
@@ -16,6 +16,7 @@ from app.services.audit_service import AuditService
 from app.services.mfa_service import MfaService
 from app.services.password_policy import password_was_recently_used, validate_password_strength
 from app.services.rate_limiter import LoginRateLimiter
+from app.services.os_auth import get_os_auth_provider
 from app.services.token_service import TokenService
 
 
@@ -45,6 +46,7 @@ class AuthService:
         self.users = UserRepository(db)
         self.tokens = TokenService(settings)
         self.mfa = MfaService(settings)
+        self.os_auth = get_os_auth_provider(settings)
         self.audit = audit_service or AuditService(db, settings)
         self.rate_limiter = LoginRateLimiter(settings.login_rate_limit_attempts, settings.login_rate_limit_window_seconds)
 
@@ -89,9 +91,10 @@ class AuthService:
         return RegistrationResult(user=user, provisioning_uri=provisioning_uri, qr_code_data_uri=qr_uri)
 
     def login(self, username: str, password: str, ip_address: str | None = None, user_agent: str | None = None) -> LoginResult:
-        if not self.rate_limiter.allow(f"{ip_address}:{username}").allowed:
+        normalized_username = username.strip()
+        if not self.rate_limiter.allow(f"{ip_address}:{normalized_username}").allowed:
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many login attempts")
-        user = self.users.get_by_username(username.strip())
+        user = self.users.get_by_username(normalized_username)
         if not user or not user.is_active:
             self.audit.record("login", False, detail="unknown user or inactive", ip_address=ip_address)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -102,7 +105,16 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account locked")
         if password_expires_at and password_expires_at < now:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password expired")
-        if not password_matches_hash(password, user.password_hash):
+        backend = self.settings.auth_backend.strip().lower()
+        if backend == "pam":
+            try:
+                credentials_valid = self.os_auth.authenticate(normalized_username, password)
+            except Exception:
+                credentials_valid = False
+        else:
+            credentials_valid = password_matches_hash(password, user.password_hash)
+
+        if not credentials_valid:
             locked_until = None
             if user.failed_login_attempts + 1 >= self.settings.max_failed_attempts:
                 locked_until = now + timedelta(minutes=self.settings.lockout_minutes)
@@ -190,3 +202,33 @@ class AuthService:
     def can_reuse_password(self, user_id: str, candidate_password: str) -> bool:
         history = self.users.get_recent_password_hashes(user_id, self.settings.password_history_count)
         return password_was_recently_used(candidate_password, history)
+
+    def change_password(self, user_id: str, current_password: str, new_password: str, ip_address: str | None = None) -> None:
+        user = self.users.get_by_id(user_id)
+        if not user or not user.is_active:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        if not password_matches_hash(current_password, user.password_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is incorrect")
+
+        try:
+            validate_password_strength(new_password)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+        recent_hashes = self.users.get_recent_password_hashes(user.id, self.settings.password_history_count)
+        if password_was_recently_used(new_password, recent_hashes):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"New password must not match your last {self.settings.password_history_count} passwords",
+            )
+
+        new_hash = hash_password(new_password)
+        now = datetime.now(timezone.utc)
+        user.password_hash = new_hash
+        user.password_changed_at = now
+        user.password_expires_at = now + timedelta(days=self.settings.password_expiry_days)
+        self.users.add_password_history(user.id, new_hash)
+        self.users.reset_failed_attempts(user)
+        self.db.commit()
+        self.audit.record("password_change", True, user_id=user.id, ip_address=ip_address, detail="password updated")
