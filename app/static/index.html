@@ -123,6 +123,39 @@
     .ok { color: var(--ok); }
     .bad { color: var(--bad); }
 
+    .mfa-box {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      display: none;
+    }
+
+    .mfa-box img {
+      width: min(260px, 100%);
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 6px;
+    }
+
+    .mfa-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .mfa-actions a {
+      text-decoration: none;
+      color: #0d1318;
+      background: var(--accent);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
     pre {
       margin: 8px 0 0;
       white-space: pre-wrap;
@@ -192,6 +225,16 @@
       <div id="msg" class="mini">Ready</div>
       <pre id="out">{}</pre>
     </section>
+
+    <section id="mfaBox" class="mfa-box">
+      <strong>MFA Setup QR</strong>
+      <p class="mini">Scan this QR in Google Authenticator / Microsoft Authenticator.</p>
+      <img id="mfaQr" alt="MFA QR" />
+      <div class="mfa-actions">
+        <a id="openAuthLink" href="#">Open Authenticator Link</a>
+      </div>
+      <p class="mini" id="mfaHint"></p>
+    </section>
   </main>
 
   <script>
@@ -203,7 +246,7 @@
         return "This username is already used. Try a different username.";
       }
       if (detail.includes("Email already exists")) {
-        return "This email is already registered. Use another email or login.";
+        return "This email is already registered. Try email+tag format like yourname+2@gmail.com.";
       }
       if (detail.includes("Password must be at least 12 characters")) {
         return "Password must be 12+ chars with uppercase, lowercase, number, and symbol.";
@@ -264,6 +307,21 @@
 
         const data = await api("/api/register", "POST", payload);
         setResult(true, "Account created. Add MFA using mfa_setup_uri.", data);
+
+        const mfaBox = document.getElementById("mfaBox");
+        const mfaQr = document.getElementById("mfaQr");
+        const openAuthLink = document.getElementById("openAuthLink");
+        const mfaHint = document.getElementById("mfaHint");
+
+        if (data.qr_code_data_uri) {
+          mfaBox.style.display = "block";
+          mfaQr.src = data.qr_code_data_uri;
+          openAuthLink.href = data.mfa_setup_uri || "#";
+          mfaHint.textContent = "If phone does not open app from link, scan QR manually.";
+        } else {
+          mfaBox.style.display = "none";
+        }
+
         document.getElementById("loginUsername").value = payload.username;
         document.getElementById("loginPassword").value = payload.password;
       } catch (err) {
