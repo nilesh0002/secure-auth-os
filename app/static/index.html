@@ -134,6 +134,7 @@
     }
 
     function FloatingInput({ id, label, type = "text", value, onChange, error, icon }) {
+      const hasValue = String(value || "").length > 0;
       return (
         <div className="space-y-1">
           <div className="relative">
@@ -154,9 +155,11 @@
             <label
               htmlFor={id}
               className={cls(
-                "pointer-events-none absolute top-1/2 -translate-y-1/2 text-sm text-slate-400 transition-all",
+                "pointer-events-none absolute -translate-y-1/2 transition-all",
                 icon ? "left-10" : "left-3",
-                "peer-placeholder-shown:top-1/2 peer-focus:top-3 peer-focus:text-xs peer-focus:text-accent peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs"
+                hasValue
+                  ? "top-3 text-xs text-accent"
+                  : "top-1/2 text-sm text-slate-400 peer-focus:top-3 peer-focus:text-xs peer-focus:text-accent"
               )}
             >
               {label}
