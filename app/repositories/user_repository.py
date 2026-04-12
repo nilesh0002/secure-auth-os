@@ -29,6 +29,14 @@ class UserRepository(BaseRepository):
         self.db.flush()
         return user
 
+    def list_all(self) -> list[User]:
+        statement = select(User).order_by(User.created_at.desc())
+        return list(self.db.execute(statement).scalars().all())
+
+    def delete(self, user: User) -> None:
+        self.db.delete(user)
+        self.db.flush()
+
     def add_password_history(self, user_id: str, password_hash: str) -> PasswordHistory:
         history = PasswordHistory(user_id=user_id, password_hash=password_hash)
         self.db.add(history)

@@ -271,6 +271,9 @@
       const [profile, setProfile] = useState(null);
       const [verified, setVerified] = useState(false);
       const [showCheck, setShowCheck] = useState(false);
+      const [showUsersModal, setShowUsersModal] = useState(false);
+      const [usersList, setUsersList] = useState([]);
+      const [usersLoading, setUsersLoading] = useState(false);
 
       const otpCode = otp.join("");
 
@@ -409,6 +412,51 @@
         }
       };
 
+      const formatDate = (raw) => {
+        if (!raw) return "-";
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return "-";
+        return d.toLocaleString();
+      };
+
+      const openUsersModal = async () => {
+        if (!tokens.access) {
+          showBanner("Verify OTP and fetch token first.", "error");
+          return;
+        }
+
+        setShowUsersModal(true);
+        try {
+          setUsersLoading(true);
+          // UI interaction: load all users only when modal is opened.
+          const data = await api("/api/users", "GET", null, tokens.access);
+          setUsersList(Array.isArray(data) ? data : []);
+        } catch (err) {
+          showBanner(parseError(err), "error");
+          if (err?.status === 403) {
+            showBanner("Only admin can manage users.", "error");
+          }
+        } finally {
+          setUsersLoading(false);
+        }
+      };
+
+      const deleteUser = async (userId) => {
+        if (!tokens.access || !userId) return;
+        // UI interaction: confirm before delete to prevent accidental removal.
+        const confirmed = window.confirm("Delete this user? This action cannot be undone.");
+        if (!confirmed) return;
+
+        try {
+          await api(`/api/users/${userId}`, "DELETE", null, tokens.access);
+          // UI interaction: remove deleted user instantly without page reload.
+          setUsersList((prev) => prev.filter((u) => u.id !== userId));
+          showBanner("User deleted", "ok");
+        } catch (err) {
+          showBanner(parseError(err), "error");
+        }
+      };
+
       const nextLabel = [
         loading ? "Creating..." : "Create Account",
         loading ? "Signing in..." : "Login",
@@ -429,7 +477,10 @@
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-300/90">SecureAuthOS</p>
                   <h1 className="mt-1 text-xl font-semibold">Mobile Auth Flow</h1>
                 </div>
-                <a href="/docs" className="rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200">API</a>
+                <div className="flex items-center gap-2">
+                  <button onClick={openUsersModal} className="rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200">Manage Users</button>
+                  <a href="/docs" className="rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200">API</a>
+                </div>
               </div>
 
               <div className="mt-5 flex items-center gap-2">
@@ -552,6 +603,34 @@
               </div>
               <RippleButton label={nextLabel} onClick={nextAction} disabled={loading || showCheck} />
             </div>
+
+            {showUsersModal && (
+              <div className="absolute inset-0 z-20 grid place-items-center bg-slate-950/70 p-4">
+                <div className="glass w-full max-w-sm rounded-2xl border border-white/20 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">Manage Users</h3>
+                    <button onClick={() => setShowUsersModal(false)} className="rounded-lg border border-white/20 px-2 py-1 text-xs">Close</button>
+                  </div>
+
+                  {usersLoading ? (
+                    <p className="text-xs text-slate-300">Loading users...</p>
+                  ) : usersList.length === 0 ? (
+                    <p className="text-xs text-slate-300">No users found.</p>
+                  ) : (
+                    <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                      {usersList.map((u) => (
+                        <div key={u.id} className="rounded-xl border border-white/15 bg-slate-900/35 p-2.5 text-xs">
+                          <p className="truncate font-semibold text-slate-100">{u.email || u.username}</p>
+                          <p className="truncate text-slate-300">ID: {u.id}</p>
+                          <p className="text-slate-400">Created: {formatDate(u.created_at)}</p>
+                          <button onClick={() => deleteUser(u.id)} className="mt-2 rounded-lg border border-rose-300/40 bg-rose-500/10 px-2 py-1 text-rose-200">Delete</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
         </div>
       );

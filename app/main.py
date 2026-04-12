@@ -11,6 +11,7 @@ from app.db.base import Base
 from app.db.session import engine
 from app.models import audit_log, password_history, refresh_token, user  # noqa: F401
 from app.routers.auth import router as auth_router
+from app.routers.users import router as users_router
 
 
 settings = get_settings()
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
     app.include_router(auth_router, prefix="/api")
+    app.include_router(users_router, prefix="/api")
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
