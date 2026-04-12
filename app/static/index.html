@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecureAuthOS</title>
+  <style>
+    :root {
+      --bg-1: #0f1f2b;
+      --bg-2: #143c50;
+      --card: rgba(8, 18, 24, 0.78);
+      --line: rgba(255, 255, 255, 0.14);
+      --text: #eef4f8;
+      --muted: #b8c6d1;
+      --accent: #ffd166;
+      --ok: #74d99f;
+      --bad: #ff8f8f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 12%, rgba(255, 209, 102, 0.22), transparent 35%),
+        radial-gradient(circle at 86% 8%, rgba(44, 175, 201, 0.22), transparent 32%),
+        linear-gradient(140deg, var(--bg-1), var(--bg-2));
+      padding: 20px;
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .hero {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.4rem, 2.4vw, 2.1rem);
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.86rem;
+      color: var(--muted);
+      margin: 8px 0 4px;
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      border-radius: 9px;
+      padding: 10px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: rgba(255, 209, 102, 0.9);
+    }
+
+    button {
+      margin-top: 10px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #111;
+      font-weight: 700;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+
+    .mini {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .status {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+
+    pre {
+      margin: 8px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: rgba(0, 0, 0, 0.24);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 0.82rem;
+      color: #dce7ef;
+      max-height: 260px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>SecureAuthOS</h1>
+      <p>Simple flow: Create account -> Login -> Enter 6-digit app code -> Done.</p>
+      <p class="mini">Need help? Open <a href="/docs" style="color:#ffd166;">API docs</a>.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>1) Create Account</h2>
+        <label>Username</label>
+        <input id="regUsername" placeholder="yourname" />
+        <label>Email</label>
+        <input id="regEmail" placeholder="you@example.com" />
+        <label>Password</label>
+        <input id="regPassword" type="password" placeholder="StrongPass!234" />
+        <button id="registerBtn">Create Account</button>
+        <p class="mini">After this, copy the QR setup URI below and add it to Google Authenticator.</p>
+      </article>
+
+      <article class="card">
+        <h2>2) Login</h2>
+        <label>Username</label>
+        <input id="loginUsername" placeholder="same username" />
+        <label>Password</label>
+        <input id="loginPassword" type="password" placeholder="same password" />
+        <button id="loginBtn">Login</button>
+        <p class="mini">This gives an MFA token for next step.</p>
+      </article>
+
+      <article class="card">
+        <h2>3) Enter 6-Digit Code</h2>
+        <label>MFA Token (auto-filled after Login)</label>
+        <textarea id="mfaToken" rows="3" placeholder="mfa token"></textarea>
+        <label>OTP from Authenticator App</label>
+        <input id="otpCode" placeholder="123456" />
+        <button id="verifyBtn">Verify Code</button>
+        <p class="mini">This gives Access Token + Refresh Token.</p>
+      </article>
+
+      <article class="card">
+        <h2>4) Check My Profile</h2>
+        <label>Access Token (auto-filled after Verify)</label>
+        <textarea id="accessToken" rows="4" placeholder="access token"></textarea>
+        <button id="meBtn">Get My Profile</button>
+      </article>
+    </section>
+
+    <section class="status">
+      <strong>Result</strong>
+      <div id="msg" class="mini">Ready</div>
+      <pre id="out">{}</pre>
+    </section>
+  </main>
+
+  <script>
+    let refreshToken = "";
+
+    function setResult(ok, title, data) {
+      const msg = document.getElementById("msg");
+      const out = document.getElementById("out");
+      msg.className = ok ? "ok" : "bad";
+      msg.textContent = title;
+      out.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+    }
+
+    async function api(path, method, body, token) {
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers.Authorization = "Bearer " + token;
+      }
+      const res = await fetch(path, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const txt = await res.text();
+      let data;
+      try {
+        data = JSON.parse(txt);
+      } catch (_) {
+        data = txt;
+      }
+      if (!res.ok) {
+        throw { status: res.status, data };
+      }
+      return data;
+    }
+
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      try {
+        const payload = {
+          username: document.getElementById("regUsername").value.trim(),
+          email: document.getElementById("regEmail").value.trim(),
+          password: document.getElementById("regPassword").value,
+          role: "user"
+        };
+        const data = await api("/api/register", "POST", payload);
+        setResult(true, "Account created. Add MFA using mfa_setup_uri.", data);
+        document.getElementById("loginUsername").value = payload.username;
+        document.getElementById("loginPassword").value = payload.password;
+      } catch (err) {
+        setResult(false, "Register failed", err);
+      }
+    });
+
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      try {
+        const payload = {
+          username: document.getElementById("loginUsername").value.trim(),
+          password: document.getElementById("loginPassword").value
+        };
+        const data = await api("/api/login", "POST", payload);
+        document.getElementById("mfaToken").value = data.mfa_token || "";
+        setResult(true, "Login OK. Enter OTP now.", data);
+      } catch (err) {
+        setResult(false, "Login failed", err);
+      }
+    });
+
+    document.getElementById("verifyBtn").addEventListener("click", async () => {
+      try {
+        const payload = {
+          mfa_token: document.getElementById("mfaToken").value.trim(),
+          otp: document.getElementById("otpCode").value.trim()
+        };
+        const data = await api("/api/verify-mfa", "POST", payload);
+        document.getElementById("accessToken").value = data.access_token || "";
+        refreshToken = data.refresh_token || "";
+        setResult(true, "Verification success. You are logged in.", data);
+      } catch (err) {
+        setResult(false, "Verify failed", err);
+      }
+    });
+
+    document.getElementById("meBtn").addEventListener("click", async () => {
+      try {
+        const token = document.getElementById("accessToken").value.trim();
+        const data = await api("/api/me", "GET", null, token);
+        setResult(true, "Profile fetched.", data);
+      } catch (err) {
+        setResult(false, "Profile request failed", err);
+      }
+    });
+  </script>
+</body>
+</html>
