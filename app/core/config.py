@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     totp_issuer: str = "SecureAuthOS"
     auth_backend: str = "local"
     audit_log_path: str = "logs/audit.log"
+    refresh_cookie_name: str = "refresh_token"
+    refresh_cookie_samesite: str = "lax"
+    refresh_cookie_secure: bool = Field(default_factory=lambda: os.getenv("ENVIRONMENT", "development").lower() != "development")
+    bootstrap_admin_enabled: bool = True
+    bootstrap_admin_username: str = "admin"
+    bootstrap_admin_password: str = "admin123"
+    bootstrap_admin_email: str = "admin@example.com"
+    bootstrap_admin_totp_secret: str = "JBSWY3DPEHPK3PXP"
 
 
 @lru_cache

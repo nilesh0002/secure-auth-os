@@ -69,8 +69,8 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
         if self.users.get_by_email(normalized_email):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
-        if role not in {UserRole.admin.value, UserRole.user.value}:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
+        if role != UserRole.user.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Public registration only supports user role")
         password_hash = hash_password(password)
         _, encrypted_secret, provisioning_uri, qr_uri = self.mfa.create_setup_payload(normalized_username)
         now = datetime.now(timezone.utc)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -59,29 +59,56 @@ def login(payload: LoginRequest, request: Request, service: AuthService = Depend
 
 
 @router.post("/verify-mfa", response_model=TokenResponse)
-def verify_mfa(payload: MfaVerifyRequest, request: Request, service: AuthService = Depends(_service)):
+def verify_mfa(payload: MfaVerifyRequest, request: Request, response: Response, service: AuthService = Depends(_service)):
     result = service.verify_mfa(
         mfa_token=payload.mfa_token,
         otp=payload.otp,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
-    return TokenResponse(access_token=result.access_token, refresh_token=result.refresh_token, expires_at=result.expires_at)
+    settings = get_settings()
+    response.set_cookie(
+        key=settings.refresh_cookie_name,
+        value=result.refresh_token,
+        httponly=True,
+        secure=settings.refresh_cookie_secure,
+        samesite=settings.refresh_cookie_samesite,
+        max_age=settings.refresh_token_ttl_days * 24 * 60 * 60,
+        path="/api",
+    )
+    return TokenResponse(access_token=result.access_token, expires_at=result.expires_at)
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh(payload: RefreshRequest, request: Request, service: AuthService = Depends(_service)):
+def refresh(request: Request, response: Response, payload: RefreshRequest | None = None, service: AuthService = Depends(_service)):
+    settings = get_settings()
+    refresh_token = (payload.refresh_token if payload else None) or request.cookies.get(settings.refresh_cookie_name)
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
     result = service.refresh(
-        refresh_token=payload.refresh_token,
+        refresh_token=refresh_token,
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
-    return TokenResponse(access_token=result.access_token, refresh_token=result.refresh_token, expires_at=result.expires_at)
+    response.set_cookie(
+        key=settings.refresh_cookie_name,
+        value=result.refresh_token,
+        httponly=True,
+        secure=settings.refresh_cookie_secure,
+        samesite=settings.refresh_cookie_samesite,
+        max_age=settings.refresh_token_ttl_days * 24 * 60 * 60,
+        path="/api",
+    )
+    return TokenResponse(access_token=result.access_token, expires_at=result.expires_at)
 
 
 @router.post("/logout")
-def logout(payload: LogoutRequest, request: Request, service: AuthService = Depends(_service)):
-    service.logout(payload.refresh_token, ip_address=request.client.host if request.client else None)
+def logout(request: Request, response: Response, payload: LogoutRequest | None = None, service: AuthService = Depends(_service)):
+    settings = get_settings()
+    refresh_token = (payload.refresh_token if payload else None) or request.cookies.get(settings.refresh_cookie_name)
+    if refresh_token:
+        service.logout(refresh_token, ip_address=request.client.host if request.client else None)
+    response.delete_cookie(key=settings.refresh_cookie_name, path="/api")
     return {"detail": "Logged out"}
 
 

@@ -15,7 +15,7 @@ from passlib.context import CryptContext
 
 from app.core.config import Settings
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt", "argon2"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:

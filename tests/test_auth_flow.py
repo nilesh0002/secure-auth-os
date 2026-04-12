@@ -6,6 +6,11 @@ from urllib.parse import urlparse, parse_qs
 import pyotp
 
 
+BOOTSTRAP_ADMIN_USERNAME = "admin"
+BOOTSTRAP_ADMIN_PASSWORD = "admin123"
+BOOTSTRAP_ADMIN_TOTP_SECRET = "JBSWY3DPEHPK3PXP"
+
+
 def _unique_user(prefix: str = "user"):
     suffix = uuid.uuid4().hex[:8]
     return f"{prefix}_{suffix}".lower(), f"{prefix}_{suffix}@example.com"
@@ -64,7 +69,6 @@ def test_register_login_mfa_and_me(client):
     assert verify_response.status_code == 200
     tokens = verify_response.json()
     assert tokens["access_token"]
-    assert tokens["refresh_token"]
 
     me_response = client.get("/api/me", headers={"Authorization": f"Bearer {tokens['access_token']}"})
     assert me_response.status_code == 200
@@ -134,17 +138,18 @@ def test_change_password_and_reuse_block(client):
 
 
 def test_admin_can_list_and_delete_user_then_email_can_be_reused(client):
-    admin_username, admin_email = _unique_user("admin")
     target_username, target_email = _unique_user("target")
-    admin_password = _strong_password()
     target_password = _strong_password()
 
-    admin_register = _register(client, admin_username, admin_email, admin_password, "admin")
     target_register = _register(client, target_username, target_email, target_password, "user")
-    assert admin_register.status_code == 200
     assert target_register.status_code == 200
 
-    admin_access = _access_token_for(client, admin_username, admin_password, admin_register.json()["mfa_setup_uri"])
+    admin_login = client.post("/api/login", json={"username": BOOTSTRAP_ADMIN_USERNAME, "password": BOOTSTRAP_ADMIN_PASSWORD})
+    admin_verify = client.post(
+        "/api/verify-mfa",
+        json={"mfa_token": admin_login.json()["mfa_token"], "otp": pyotp.TOTP(BOOTSTRAP_ADMIN_TOTP_SECRET).now()},
+    )
+    admin_access = admin_verify.json()["access_token"]
 
     users_response = client.get("/api/users", headers={"Authorization": f"Bearer {admin_access}"})
     assert users_response.status_code == 200
@@ -173,10 +178,18 @@ def test_non_admin_cannot_access_user_management(client):
 
 
 def test_delete_user_not_found_returns_404(client):
-    admin_username, admin_email = _unique_user("admin404")
-    admin_password = _strong_password()
-    admin_register = _register(client, admin_username, admin_email, admin_password, "admin")
-    admin_access = _access_token_for(client, admin_username, admin_password, admin_register.json()["mfa_setup_uri"])
+    admin_login = client.post("/api/login", json={"username": BOOTSTRAP_ADMIN_USERNAME, "password": BOOTSTRAP_ADMIN_PASSWORD})
+    admin_verify = client.post(
+        "/api/verify-mfa",
+        json={"mfa_token": admin_login.json()["mfa_token"], "otp": pyotp.TOTP(BOOTSTRAP_ADMIN_TOTP_SECRET).now()},
+    )
+    admin_access = admin_verify.json()["access_token"]
 
     response = client.delete("/api/users/does-not-exist", headers={"Authorization": f"Bearer {admin_access}"})
     assert response.status_code == 404
+
+
+def test_public_registration_cannot_create_admin_role(client):
+    username, email = _unique_user("blockedadmin")
+    response = _register(client, username, email, _strong_password(), "admin")
+    assert response.status_code == 403
