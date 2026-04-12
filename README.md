@@ -68,13 +68,15 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 
 ## API Endpoints
 
-- `POST /register`
-- `POST /login`
-- `POST /verify-mfa`
-- `POST /refresh`
-- `POST /logout`
-- `GET /me`
-- `GET /admin/health`
+- `GET /` (public landing page)
+- `GET /health` (public health check)
+- `POST /api/register`
+- `POST /api/login`
+- `POST /api/verify-mfa`
+- `POST /api/refresh`
+- `POST /api/logout`
+- `GET /api/me`
+- `GET /api/admin/health`
 
 ## Security Notes
 
@@ -92,7 +94,7 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 2. The API returns a TOTP provisioning URI and QR-code data URI.
 3. Scan the QR code with Google Authenticator or a similar app.
 4. Log in with username and password.
-5. Submit the MFA token and current TOTP code to `/verify-mfa`.
+5. Submit the MFA token and current TOTP code to `/api/verify-mfa`.
 6. Receive access and refresh tokens.
 
 ## CLI
