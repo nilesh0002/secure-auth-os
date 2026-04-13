@@ -9,7 +9,7 @@ SentinelAuth OS is a modular authentication service built with FastAPI, SQLAlche
 
 - User registration and login
 - Argon2 password hashing with automatic salting
-- TOTP MFA with QR-code enrollment
+- Configurable MFA: TOTP app (QR enrollment) or email OTP
 - Strong password policy enforcement
 - Password history tracking for reuse prevention
 - Password expiry support
@@ -92,11 +92,17 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 ## MFA Flow
 
 1. Register a user.
-2. The API returns a TOTP provisioning URI and QR-code data URI.
-3. Scan the QR code with Google Authenticator or a similar app.
+2. If `MFA_METHOD=totp`, the API returns a provisioning URI and QR-code data URI.
+3. If `MFA_METHOD=email`, no authenticator app is needed; login issues a one-time email OTP challenge.
 4. Log in with username and password.
-5. Submit the MFA token and current TOTP code to `/api/verify-mfa`.
+5. Submit the MFA token and OTP code to `/api/verify-mfa`.
 6. Receive access and refresh tokens.
+
+### Email OTP Mode (Optional)
+
+- Set `MFA_METHOD=email` to replace authenticator-app OTP with email OTP.
+- For local/testing only, you can set `EXPOSE_EMAIL_OTP_IN_RESPONSE=true` to include the OTP in the login response.
+- Keep `EXPOSE_EMAIL_OTP_IN_RESPONSE=false` in production.
 
 ## CLI
 

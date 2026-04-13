@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.email_otp_challenge import EmailOtpChallenge
 from app.models.password_history import PasswordHistory
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
@@ -77,4 +78,37 @@ class UserRepository(BaseRepository):
 
     def revoke_refresh_token(self, refresh_token: RefreshToken) -> None:
         refresh_token.revoked_at = datetime.utcnow()
+        self.db.flush()
+
+    def create_email_otp_challenge(self, challenge: EmailOtpChallenge) -> EmailOtpChallenge:
+        self.db.add(challenge)
+        self.db.flush()
+        return challenge
+
+    def get_latest_email_otp_challenge(self, user_id: str) -> EmailOtpChallenge | None:
+        statement = (
+            select(EmailOtpChallenge)
+            .where(EmailOtpChallenge.user_id == user_id)
+            .order_by(EmailOtpChallenge.created_at.desc())
+            .limit(1)
+        )
+        return self.db.execute(statement).scalar_one_or_none()
+
+    def expire_active_email_otp_challenges(self, user_id: str, now: datetime) -> None:
+        statement = select(EmailOtpChallenge).where(
+            EmailOtpChallenge.user_id == user_id,
+            EmailOtpChallenge.consumed_at.is_(None),
+            EmailOtpChallenge.expires_at > now,
+        )
+        active = self.db.execute(statement).scalars().all()
+        for challenge in active:
+            challenge.consumed_at = now
+        self.db.flush()
+
+    def increment_email_otp_attempt(self, challenge: EmailOtpChallenge) -> None:
+        challenge.attempts += 1
+        self.db.flush()
+
+    def consume_email_otp_challenge(self, challenge: EmailOtpChallenge, now: datetime) -> None:
+        challenge.consumed_at = now
         self.db.flush()

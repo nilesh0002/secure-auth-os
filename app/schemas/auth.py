@@ -32,6 +32,9 @@ class TokenResponse(BaseModel):
 class PendingMfaResponse(BaseModel):
     mfa_required: bool = True
     mfa_token: str
+    mfa_method: str = "totp"
+    delivery_hint: Optional[str] = None
+    test_otp: Optional[str] = None
     mfa_setup_uri: Optional[str] = None
     qr_code_data_uri: Optional[str] = None
 
@@ -41,8 +44,8 @@ class RegistrationResponse(BaseModel):
     username: str
     email: EmailStr
     role: UserRole
-    mfa_setup_uri: str
-    qr_code_data_uri: str
+    mfa_setup_uri: Optional[str] = None
+    qr_code_data_uri: Optional[str] = None
 
 
 class RefreshRequest(BaseModel):

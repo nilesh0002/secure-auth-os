@@ -14,6 +14,8 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{db_path}")
     monkeypatch.setenv("SECRET_KEY", "test-secret-key-test-secret-key-test-secret-key-123456")
     monkeypatch.setenv("DATA_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"1" * 32).decode("utf-8"))
+    monkeypatch.setenv("MFA_METHOD", "totp")
+    monkeypatch.setenv("EXPOSE_EMAIL_OTP_IN_RESPONSE", "false")
 
     from app.core.config import get_settings
 
@@ -27,6 +29,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     from app.db.base import Base
     from app.models.audit_log import AuditLog  # noqa: F401
+    from app.models.email_otp_challenge import EmailOtpChallenge  # noqa: F401
     from app.models.password_history import PasswordHistory  # noqa: F401
     from app.models.refresh_token import RefreshToken  # noqa: F401
     from app.models.user import User  # noqa: F401

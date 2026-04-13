@@ -13,6 +13,7 @@ from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.services.audit_service import AuditService
+from app.services.email_otp_service import EmailOtpService
 from app.services.mfa_service import MfaService
 from app.services.password_policy import password_was_recently_used, validate_password_strength
 from app.services.rate_limiter import LoginRateLimiter
@@ -23,13 +24,16 @@ from app.services.token_service import TokenService
 @dataclass
 class RegistrationResult:
     user: User
-    provisioning_uri: str
-    qr_code_data_uri: str
+    provisioning_uri: str | None = None
+    qr_code_data_uri: str | None = None
 
 
 @dataclass
 class LoginResult:
     mfa_token: str
+    mfa_method: str
+    delivery_hint: str | None = None
+    test_otp: str | None = None
 
 
 @dataclass
@@ -46,6 +50,7 @@ class AuthService:
         self.users = UserRepository(db)
         self.tokens = TokenService(settings)
         self.mfa = MfaService(settings)
+        self.email_otp = EmailOtpService(settings, self.users)
         self.os_auth = get_os_auth_provider(settings)
         self.audit = audit_service or AuditService(db, settings)
         self.rate_limiter = LoginRateLimiter(settings.login_rate_limit_attempts, settings.login_rate_limit_window_seconds)
@@ -72,7 +77,11 @@ class AuthService:
         if role != UserRole.user.value:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Public registration only supports user role")
         password_hash = hash_password(password)
-        _, encrypted_secret, provisioning_uri, qr_uri = self.mfa.create_setup_payload(normalized_username)
+        provisioning_uri = None
+        qr_uri = None
+        encrypted_secret = None
+        if self.settings.mfa_method.strip().lower() == "totp":
+            _, encrypted_secret, provisioning_uri, qr_uri = self.mfa.create_setup_payload(normalized_username)
         now = datetime.now(timezone.utc)
         user = User(
             username=normalized_username,
@@ -125,8 +134,19 @@ class AuthService:
         self.users.reset_failed_attempts(user)
         self.db.commit()
         mfa_token = self.tokens.create_mfa_token(user.id, user.role)
+        mfa_method = self.settings.mfa_method.strip().lower()
+        delivery_hint = None
+        test_otp = None
+        if mfa_method == "email":
+            code = self.email_otp.issue_challenge(user)
+            self.db.commit()
+            delivery_hint = self.email_otp.delivery_hint(user.email)
+            if self.settings.expose_email_otp_in_response:
+                test_otp = code
+            self.audit.record("mfa_email_otp_issued", True, user_id=user.id, ip_address=ip_address, detail=f"email={user.email}")
+
         self.audit.record("login", True, user_id=user.id, ip_address=ip_address, detail="password accepted")
-        return LoginResult(mfa_token=mfa_token)
+        return LoginResult(mfa_token=mfa_token, mfa_method=mfa_method or "totp", delivery_hint=delivery_hint, test_otp=test_otp)
 
     def verify_mfa(self, mfa_token: str, otp: str, ip_address: str | None = None, user_agent: str | None = None) -> AuthenticatedSession:
         try:
@@ -136,11 +156,21 @@ class AuthService:
         if payload.get("typ") != "mfa_pending":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid MFA token")
         user = self.users.get_by_id(payload["sub"])
-        if not user or not user.is_active or not user.mfa_secret_encrypted:
+        if not user or not user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user state")
-        if not self.mfa.verify_otp(user.mfa_secret_encrypted, otp):
-            self.audit.record("mfa", False, user_id=user.id, ip_address=ip_address, detail="bad otp")
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
+
+        mfa_method = self.settings.mfa_method.strip().lower()
+        if mfa_method == "email":
+            if not self.email_otp.verify_challenge(user.id, otp):
+                self.db.commit()
+                self.audit.record("mfa", False, user_id=user.id, ip_address=ip_address, detail="bad email otp")
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
+            self.db.commit()
+        else:
+            if not user.mfa_secret_encrypted or not self.mfa.verify_otp(user.mfa_secret_encrypted, otp):
+                self.audit.record("mfa", False, user_id=user.id, ip_address=ip_address, detail="bad otp")
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
+
         access_token = self.tokens.create_access_token(user.id, user.role)
         refresh_token, token_hash, refresh_jti, expires_at = self.tokens.create_refresh_token(user.id, user.role)
         stored_refresh = RefreshToken(

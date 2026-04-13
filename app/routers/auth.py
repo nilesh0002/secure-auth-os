@@ -59,13 +59,20 @@ def login(payload: LoginRequest, request: Request, service: AuthService = Depend
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
-    return PendingMfaResponse(mfa_token=result.mfa_token)
+    return PendingMfaResponse(
+        mfa_token=result.mfa_token,
+        mfa_method=result.mfa_method,
+        delivery_hint=result.delivery_hint,
+        test_otp=result.test_otp,
+    )
 
 
 @router.post("/bootstrap-admin/mfa-setup", response_model=BootstrapAdminMfaResponse)
 def bootstrap_admin_mfa_setup(payload: BootstrapAdminMfaRequest, db: Session = Depends(get_db)):
     # Provides admin authenticator QR only after credential verification.
     settings = get_settings()
+    if settings.mfa_method.strip().lower() != "totp":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Authenticator setup is disabled for current MFA method")
     if not settings.bootstrap_admin_enabled:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     if payload.username.strip().lower() != settings.bootstrap_admin_username.lower():

@@ -10,7 +10,7 @@ from app.core.config import get_settings
 from app.core.security import encrypt_secret, hash_password
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
-from app.models import audit_log, password_history, refresh_token, user  # noqa: F401
+from app.models import audit_log, email_otp_challenge, password_history, refresh_token, user  # noqa: F401
 from app.models.user import User
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
