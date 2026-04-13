@@ -13,6 +13,7 @@ from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.services.audit_service import AuditService
+from app.services.email_sender import EmailDeliveryError, EmailSender
 from app.services.email_otp_service import EmailOtpService
 from app.services.mfa_service import MfaService
 from app.services.password_policy import password_was_recently_used, validate_password_strength
@@ -51,6 +52,7 @@ class AuthService:
         self.tokens = TokenService(settings)
         self.mfa = MfaService(settings)
         self.email_otp = EmailOtpService(settings, self.users)
+        self.email_sender = EmailSender(settings)
         self.os_auth = get_os_auth_provider(settings)
         self.audit = audit_service or AuditService(db, settings)
         self.rate_limiter = LoginRateLimiter(settings.login_rate_limit_attempts, settings.login_rate_limit_window_seconds)
@@ -141,9 +143,27 @@ class AuthService:
             code = self.email_otp.issue_challenge(user)
             self.db.commit()
             delivery_hint = self.email_otp.delivery_hint(user.email)
+            delivery_ok = False
+            try:
+                self.email_sender.send_otp(user.email, code)
+                delivery_ok = True
+            except EmailDeliveryError:
+                if not self.settings.expose_email_otp_in_response:
+                    self.audit.record(
+                        "mfa_email_otp_delivery_failed",
+                        False,
+                        user_id=user.id,
+                        ip_address=ip_address,
+                        detail="smtp not configured or delivery failed",
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Email OTP delivery is unavailable. Contact support.",
+                    )
             if self.settings.expose_email_otp_in_response:
                 test_otp = code
-            self.audit.record("mfa_email_otp_issued", True, user_id=user.id, ip_address=ip_address, detail=f"email={user.email}")
+            detail = f"email={user.email} delivered={delivery_ok}"
+            self.audit.record("mfa_email_otp_issued", True, user_id=user.id, ip_address=ip_address, detail=detail)
 
         self.audit.record("login", True, user_id=user.id, ip_address=ip_address, detail="password accepted")
         return LoginResult(mfa_token=mfa_token, mfa_method=mfa_method or "totp", delivery_hint=delivery_hint, test_otp=test_otp)

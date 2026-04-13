@@ -32,15 +32,22 @@ class Settings(BaseSettings):
     email_otp_length: int = 6
     email_otp_max_attempts: int = 5
     expose_email_otp_in_response: bool = True
+    email_otp_subject: str = "Your SentinelAuth OS verification code"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_use_starttls: bool = True
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
     auth_backend: str = "local"
     audit_log_path: str = "logs/audit.log"
     refresh_cookie_name: str = "refresh_token"
     refresh_cookie_samesite: str = "lax"
     refresh_cookie_secure: bool = Field(default_factory=lambda: os.getenv("ENVIRONMENT", "development").lower() != "development")
     bootstrap_admin_enabled: bool = True
-    bootstrap_admin_username: str = "admin"
-    bootstrap_admin_password: str = "admin123"
-    bootstrap_admin_email: str = "admin@example.com"
+    bootstrap_admin_username: str = "Pirate"
+    bootstrap_admin_password: str = "Pirate9801"
+    bootstrap_admin_email: str = "nilesh.singh7829@gmail.com"
     bootstrap_admin_totp_secret: str = "JBSWY3DPEHPK3PXP"
 
 

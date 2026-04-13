@@ -103,6 +103,8 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 - Set `MFA_METHOD=email` to replace authenticator-app OTP with email OTP.
 - For local/testing only, you can set `EXPOSE_EMAIL_OTP_IN_RESPONSE=true` to include the OTP in the login response.
 - Keep `EXPOSE_EMAIL_OTP_IN_RESPONSE=false` in production.
+- Configure SMTP for real delivery: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`.
+- If SMTP is not configured and OTP exposure is disabled, login will return `503` for email OTP requests.
 
 ## CLI
 
