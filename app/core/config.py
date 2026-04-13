@@ -27,11 +27,11 @@ class Settings(BaseSettings):
     login_rate_limit_attempts: int = 5
     login_rate_limit_window_seconds: int = 300
     totp_issuer: str = "SentinelAuth OS"
-    mfa_method: str = "totp"
+    mfa_method: str = "email"
     email_otp_ttl_minutes: int = 5
     email_otp_length: int = 6
     email_otp_max_attempts: int = 5
-    expose_email_otp_in_response: bool = False
+    expose_email_otp_in_response: bool = True
     auth_backend: str = "local"
     audit_log_path: str = "logs/audit.log"
     refresh_cookie_name: str = "refresh_token"

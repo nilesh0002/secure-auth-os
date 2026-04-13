@@ -289,7 +289,7 @@
 
       const [mfaToken, setMfaToken] = useState("");
       const [otp, setOtp] = useState(initialOtp);
-      const [mfaMethod, setMfaMethod] = useState("totp");
+      const [mfaMethod, setMfaMethod] = useState("email");
       const [deliveryHint, setDeliveryHint] = useState("");
       const [testOtp, setTestOtp] = useState("");
 
@@ -392,7 +392,7 @@
           setLoading(true);
           const data = await api("/api/login", "POST", { username: login.username.trim(), password: login.password });
           setMfaToken(data.mfa_token || "");
-          setMfaMethod((data.mfa_method || "totp").toLowerCase());
+          setMfaMethod((data.mfa_method || "email").toLowerCase());
           setDeliveryHint(data.delivery_hint || "");
           setTestOtp(data.test_otp || "");
           setStep(2);
@@ -493,7 +493,7 @@
         setShowUsersModal(false);
         setUsersList([]);
         setMfaToken("");
-        setMfaMethod("totp");
+        setMfaMethod("email");
         setDeliveryHint("");
         setTestOtp("");
         setOtp([...initialOtp]);
