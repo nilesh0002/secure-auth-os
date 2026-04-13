@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    app_name: str = "SecureAuthOS"
+    app_name: str = "SentinelAuth OS"
     environment: str = "development"
     database_url: str = "sqlite:////tmp/auth.db" if os.getenv("VERCEL") else "sqlite:///./auth.db"
     secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(64))
@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     lockout_minutes: int = 15
     login_rate_limit_attempts: int = 5
     login_rate_limit_window_seconds: int = 300
-    totp_issuer: str = "SecureAuthOS"
+    totp_issuer: str = "SentinelAuth OS"
     auth_backend: str = "local"
     audit_log_path: str = "logs/audit.log"
     refresh_cookie_name: str = "refresh_token"

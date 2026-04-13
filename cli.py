@@ -36,7 +36,7 @@ def create_user(username: str, email: str, role: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="SecureAuthOS CLI")
+    parser = argparse.ArgumentParser(description="SentinelAuth OS CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("init-db")
