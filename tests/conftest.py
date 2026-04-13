@@ -16,6 +16,10 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("DATA_ENCRYPTION_KEY", base64.urlsafe_b64encode(b"1" * 32).decode("utf-8"))
     monkeypatch.setenv("MFA_METHOD", "totp")
     monkeypatch.setenv("EXPOSE_EMAIL_OTP_IN_RESPONSE", "false")
+    monkeypatch.setenv("BOOTSTRAP_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("BOOTSTRAP_ADMIN_PASSWORD", "admin123")
+    monkeypatch.setenv("BOOTSTRAP_ADMIN_EMAIL", "admin@example.com")
+    monkeypatch.setenv("BOOTSTRAP_ADMIN_TOTP_SECRET", "JBSWY3DPEHPK3PXP")
 
     from app.core.config import get_settings
 
