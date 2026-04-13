@@ -390,7 +390,7 @@
           setLoading(true);
           const data = await api("/api/login", "POST", { username: login.username.trim(), password: login.password });
           setMfaToken(data.mfa_token || "");
-          setMfaMethod((data.mfa_method || "email").toLowerCase());
+          setMfaMethod((data.mfa_method || "totp").toLowerCase());
           setStep(2);
           pulse(true);
           showBanner("Login successful. Open your authenticator app and enter the code.", "ok");
