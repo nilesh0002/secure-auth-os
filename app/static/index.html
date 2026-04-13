@@ -290,7 +290,6 @@
       const [mfaToken, setMfaToken] = useState("");
       const [otp, setOtp] = useState(initialOtp);
       const [mfaMethod, setMfaMethod] = useState("email");
-      const [deliveryHint, setDeliveryHint] = useState("");
 
       const [mfaSetup, setMfaSetup] = useState({ uri: "", qr: "" });
       const [tokens, setTokens] = useState({ access: "" });
@@ -392,10 +391,9 @@
           const data = await api("/api/login", "POST", { username: login.username.trim(), password: login.password });
           setMfaToken(data.mfa_token || "");
           setMfaMethod((data.mfa_method || "email").toLowerCase());
-          setDeliveryHint(data.delivery_hint || "");
           setStep(2);
           pulse(true);
-          showBanner(data.delivery_hint || "Login successful. Enter OTP now.", "ok");
+          showBanner("Login successful. Open your authenticator app and enter the code.", "ok");
         } catch (err) {
           pulse(false);
           showBanner(parseError(err), "error");
@@ -491,8 +489,7 @@
         setShowUsersModal(false);
         setUsersList([]);
         setMfaToken("");
-        setMfaMethod("email");
-        setDeliveryHint("");
+        setMfaMethod("totp");
         setOtp([...initialOtp]);
         setStep(1);
         showBanner("Logged out", "ok");
@@ -648,7 +645,7 @@
                   <FloatingInput id="login-user" label="Username" value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} icon="👤" />
                   <FloatingInput id="login-pass" type="password" label="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} icon="🔑" />
                   <p className="text-xs text-slate-400">Admin Panel appears after successful admin OTP login.</p>
-                  {mfaMethod !== "email" && login.username.trim().toLowerCase() === "admin" && (
+                  {login.username.trim().toLowerCase() === "admin" && (
                     <button onClick={loadAdminAuthenticatorQr} className="w-full rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200" disabled={loadingAdminQr}>
                       {loadingAdminQr ? "Loading Authenticator QR..." : "Show Admin Authenticator QR"}
                     </button>
@@ -661,16 +658,8 @@
                 <div className="space-y-4">
                   <div>
                     <h2 className="text-lg font-semibold">Verify OTP</h2>
-                    <p className="text-sm text-slate-300">
-                      {mfaMethod === "email" ? "Enter 6-digit code sent to your email." : "Enter 6-digit code from authenticator app."}
-                    </p>
+                    <p className="text-sm text-slate-300">Enter 6-digit code from authenticator app.</p>
                   </div>
-
-                  {deliveryHint && (
-                    <div className="rounded-2xl border border-white/15 bg-slate-900/40 p-3 text-xs text-slate-300">
-                      {deliveryHint}
-                    </div>
-                  )}
 
                   <div className="rounded-2xl border border-white/15 bg-slate-900/40 p-3">
                     <label className="mb-1 block text-xs text-slate-300">MFA Token</label>
