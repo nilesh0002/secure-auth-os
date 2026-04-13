@@ -4,17 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SentinelAuth OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            accent: "#f4c95d",
-            glass: "rgba(255,255,255,0.08)",
+            accent: "#ff6b4a",
+            accent2: "#0f766e",
+            paper: "rgba(255,255,255,0.84)",
           },
           boxShadow: {
-            glow: "0 24px 70px rgba(0,0,0,0.45)",
+            glow: "0 28px 80px rgba(15, 23, 42, 0.14)",
           },
           keyframes: {
             fadeUp: {
@@ -47,25 +51,49 @@
       line-height: 1.45;
     }
 
+    html {
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    body {
+      color: #0f172a;
+    }
+
     .glass {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(18px) saturate(1.1);
+      box-shadow: 0 30px 80px rgba(15, 23, 42, 0.12);
     }
 
     .bg-auth {
       background:
-        radial-gradient(circle at 8% 8%, rgba(244, 201, 93, 0.22), transparent 34%),
-        radial-gradient(circle at 92% 10%, rgba(45, 212, 191, 0.18), transparent 30%),
-        linear-gradient(145deg, #081621, #0d2635 52%, #123f49);
+        radial-gradient(circle at 12% 10%, rgba(255, 107, 74, 0.18), transparent 26%),
+        radial-gradient(circle at 88% 14%, rgba(15, 118, 110, 0.15), transparent 24%),
+        radial-gradient(circle at 50% 110%, rgba(245, 158, 11, 0.1), transparent 30%),
+        linear-gradient(180deg, #f7f2eb 0%, #f2ebe1 40%, #ede6db 100%);
+      position: relative;
+    }
+
+    .bg-auth::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.35;
+      background-image:
+        linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
     }
 
     input:-webkit-autofill,
     input:-webkit-autofill:hover,
     input:-webkit-autofill:focus {
-      -webkit-text-fill-color: #e2e8f0;
+      -webkit-text-fill-color: #0f172a;
       transition: background-color 9999s ease-out 0s;
-      box-shadow: 0 0 0px 1000px rgba(15, 23, 42, 0.55) inset;
+      box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.9) inset;
     }
 
     .safe-bottom {
@@ -90,11 +118,11 @@
 
     @media (max-width: 768px) {
       h1 {
-        font-size: 1.05rem;
+        font-size: 1.15rem;
       }
 
       h2 {
-        font-size: 1rem;
+        font-size: 1.05rem;
       }
 
       .mobile-stack {
@@ -104,7 +132,7 @@
     }
   </style>
 </head>
-<body class="bg-auth min-h-screen text-slate-100">
+  <body class="bg-auth min-h-screen text-slate-900">
   <div id="root"></div>
 
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -146,9 +174,9 @@
               onChange={onChange}
               placeholder=" "
               className={cls(
-                "peer w-full rounded-2xl border bg-slate-900/45 pr-3 pt-5 pb-2 text-slate-100 outline-none transition",
+                "peer w-full rounded-3xl border bg-white/90 pr-3 pt-5 pb-2 text-slate-900 shadow-[0_8px_24px_rgba(15,23,42,0.05)] outline-none transition",
                 icon ? "pl-10" : "pl-3",
-                "border-slate-200/20 focus:border-accent/90 focus:ring-2 focus:ring-accent/20",
+                "border-slate-200 focus:border-accent/80 focus:ring-2 focus:ring-accent/15",
                 error && "border-rose-400/70"
               )}
             />
@@ -159,7 +187,7 @@
                 icon ? "left-10" : "left-3",
                 hasValue
                   ? "top-3 text-xs text-accent"
-                  : "top-1/2 text-sm text-slate-400 peer-focus:top-3 peer-focus:text-xs peer-focus:text-accent"
+                  : "top-1/2 text-sm text-slate-500 peer-focus:top-3 peer-focus:text-xs peer-focus:text-accent"
               )}
             >
               {label}
@@ -187,10 +215,10 @@
 
       return (
         <div className="space-y-1">
-          <div className="h-2 rounded-full bg-slate-800/80">
+          <div className="h-2 rounded-full bg-slate-200">
             <div className={cls("h-2 rounded-full transition-all", widths[meter], colors[meter])}></div>
           </div>
-          <p className="text-xs text-slate-300">Password strength: <span className="font-semibold">{text}</span></p>
+          <p className="text-xs text-slate-600">Password strength: <span className="font-semibold text-slate-900">{text}</span></p>
         </div>
       );
     }
@@ -198,8 +226,8 @@
     function RippleButton({ label, onClick, disabled, tone = "accent" }) {
       const btnRef = useRef(null);
       const classes = tone === "ghost"
-        ? "border border-white/20 bg-white/5 text-slate-200"
-        : "bg-accent text-slate-900";
+        ? "border border-slate-200 bg-white text-slate-700"
+        : "bg-[linear-gradient(135deg,#ff6b4a_0%,#ff9f43_100%)] text-white shadow-[0_18px_30px_rgba(255,107,74,0.22)]";
 
       const addRipple = (e) => {
         const btn = btnRef.current;
@@ -269,11 +297,11 @@
                 onKeyDown={(e) => onKeyDown(i, e)}
                 inputMode="numeric"
                 autoComplete={i === 0 ? "one-time-code" : "off"}
-                className="h-14 w-12 rounded-2xl border border-slate-300/20 bg-slate-900/45 text-center text-xl tracking-widest outline-none transition focus:border-accent/90 focus:ring-2 focus:ring-accent/25"
+                className="h-14 w-12 rounded-3xl border border-slate-200 bg-white text-center text-xl tracking-widest text-slate-900 shadow-[0_8px_24px_rgba(15,23,42,0.06)] outline-none transition focus:border-accent/80 focus:ring-2 focus:ring-accent/20"
               />
             ))}
           </div>
-          <p className="text-xs text-slate-400">Tip: you can paste full 6-digit OTP.</p>
+          <p className="text-xs text-slate-500">Tip: you can paste full 6-digit OTP.</p>
         </div>
       );
     }
@@ -561,18 +589,20 @@
       const prevEnabled = step > 0 && !loading && !showCheck;
 
       return (
-        <div className="mx-auto min-h-screen w-full max-w-md px-4 py-4">
-          <section className="glass relative flex min-h-[calc(100vh-2rem)] flex-col rounded-[30px] shadow-glow overflow-hidden">
+        <div className="mx-auto min-h-screen w-full max-w-5xl px-4 py-5 md:px-6 md:py-10">
+          <section className="glass relative flex min-h-[calc(100vh-2.5rem)] flex-col overflow-hidden rounded-[36px] border border-white/70 md:rounded-[40px]">
+            <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(255,107,74,0.18)_0%,transparent_70%)] blur-2xl"></div>
+            <div className="absolute left-0 bottom-0 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.14)_0%,transparent_70%)] blur-2xl"></div>
             <div className="px-5 pt-6">
               <div className="mobile-stack flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-300/90">SentinelAuth OS</p>
-                  <h1 className="mt-1 text-xl font-semibold">Mobile Auth Flow</h1>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">SentinelAuth OS</p>
+                  <h1 className="mt-1 font-['Fraunces'] text-2xl font-semibold text-slate-950 md:text-3xl">Secure Access Studio</h1>
                 </div>
                 <div className="mobile-stack flex items-center gap-2">
-                  {isAdmin && <button onClick={openUsersModal} className="w-full rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200 sm:w-auto">Admin Panel</button>}
-                  {tokens.access && <button onClick={onLogout} className="w-full rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-200 sm:w-auto">Logout</button>}
-                  <a href="/docs" className="w-full rounded-xl border border-white/20 px-3 py-2 text-center text-xs text-slate-200 sm:w-auto">API</a>
+                  {isAdmin && <button onClick={openUsersModal} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm sm:w-auto">Admin Panel</button>}
+                  {tokens.access && <button onClick={onLogout} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm sm:w-auto">Logout</button>}
+                  <a href="/docs" className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center text-xs text-slate-700 shadow-sm sm:w-auto">API</a>
                 </div>
               </div>
 
@@ -581,13 +611,13 @@
                   <div key={s.id} className="flex-1">
                     <div className={cls(
                       "h-1.5 rounded-full transition-all",
-                      idx <= step ? "bg-accent" : "bg-white/20"
+                      idx <= step ? "bg-[linear-gradient(90deg,#ff6b4a_0%,#ff9f43_100%)]" : "bg-slate-200"
                     )}></div>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-3 flex justify-between text-[11px] text-slate-300">
+              <div className="mt-3 flex justify-between text-[11px] text-slate-500">
                 <span>Step {step + 1} of 4</span>
                 <span>{steps[step].label}</span>
               </div>
@@ -595,19 +625,19 @@
               {banner.text && (
                 <div className={cls(
                   "mt-4 rounded-xl border px-3 py-2 text-xs animate-fadeUp",
-                  banner.type === "error" ? "border-rose-300/40 bg-rose-500/10 text-rose-200" : "border-emerald-300/40 bg-emerald-500/10 text-emerald-200"
+                  banner.type === "error" ? "border-rose-300 bg-rose-50 text-rose-700" : "border-emerald-300 bg-emerald-50 text-emerald-700"
                 )}>
                   {banner.text}
                 </div>
               )}
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-4 animate-slideIn">
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-4 animate-slideIn md:px-6">
               {step === 0 && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-lg font-semibold">Create Account</h2>
-                    <p className="text-sm text-slate-300">Set up account + MFA in one smooth flow.</p>
+                    <h2 className="font-['Fraunces'] text-2xl font-semibold text-slate-950">Create Account</h2>
+                    <p className="text-sm text-slate-600">Set up account + MFA in one smooth flow.</p>
                   </div>
 
                   <FloatingInput id="reg-user" label="Username" value={reg.username} onChange={(e) => setReg({ ...reg, username: e.target.value })} error={errors.username} icon="👤" />
@@ -615,13 +645,13 @@
                   <FloatingInput id="reg-pass" type="password" label="Password" value={reg.password} onChange={(e) => setReg({ ...reg, password: e.target.value })} error={errors.password} icon="🔒" />
                   <PasswordStrength password={reg.password} />
 
-                  <button onClick={() => setStep(1)} className="rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200">Already have an account? Login</button>
+                  <button onClick={() => setStep(1)} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">Already have an account? Login</button>
 
                   {!!mfaSetup.qr && (
-                    <div className="space-y-2 rounded-2xl border border-white/15 bg-slate-900/40 p-3">
-                      <p className="text-xs text-slate-300">Scan this QR in Authenticator:</p>
-                      <img src={mfaSetup.qr} alt="MFA QR" className="mx-auto w-44 rounded-xl bg-white p-2" />
-                      <a href={mfaSetup.uri} className="inline-flex w-full items-center justify-center rounded-lg border border-accent/60 px-2 py-1 text-center text-[11px] text-accent">Open app</a>
+                    <div className="space-y-2 rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
+                      <p className="text-xs text-slate-600">Scan this QR in Authenticator:</p>
+                      <img src={mfaSetup.qr} alt="MFA QR" className="mx-auto w-44 rounded-2xl bg-white p-2 shadow-sm" />
+                      <a href={mfaSetup.uri} className="inline-flex w-full items-center justify-center rounded-xl border border-accent/30 px-2 py-2 text-center text-[11px] font-semibold text-accent">Open app</a>
                     </div>
                   )}
                 </div>
@@ -630,49 +660,49 @@
               {step === 1 && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-lg font-semibold">Login</h2>
-                    <p className="text-sm text-slate-300">Use your account to request OTP challenge.</p>
+                    <h2 className="font-['Fraunces'] text-2xl font-semibold text-slate-950">Login</h2>
+                    <p className="text-sm text-slate-600">Use your account to request OTP challenge.</p>
                   </div>
 
                   {!!mfaSetup.qr && (
-                    <div className="space-y-2 rounded-2xl border border-white/15 bg-slate-900/40 p-3">
-                      <p className="text-xs text-slate-300">Scan this QR in Authenticator (if not done yet):</p>
-                      <img src={mfaSetup.qr} alt="MFA QR" className="mx-auto w-44 rounded-xl bg-white p-2" />
-                      <a href={mfaSetup.uri} className="inline-flex w-full items-center justify-center rounded-lg border border-accent/60 px-2 py-1 text-center text-[11px] text-accent">Open app</a>
+                    <div className="space-y-2 rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
+                      <p className="text-xs text-slate-600">Scan this QR in Authenticator (if not done yet):</p>
+                      <img src={mfaSetup.qr} alt="MFA QR" className="mx-auto w-44 rounded-2xl bg-white p-2 shadow-sm" />
+                      <a href={mfaSetup.uri} className="inline-flex w-full items-center justify-center rounded-xl border border-accent/30 px-2 py-2 text-center text-[11px] font-semibold text-accent">Open app</a>
                     </div>
                   )}
 
                   <FloatingInput id="login-user" label="Username" value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} icon="👤" />
                   <FloatingInput id="login-pass" type="password" label="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} icon="🔑" />
-                  <p className="text-xs text-slate-400">Admin Panel appears after successful admin OTP login.</p>
+                  <p className="text-xs text-slate-500">Admin Panel appears after successful admin OTP login.</p>
                   {login.username.trim().toLowerCase() === "admin" && (
-                    <button onClick={loadAdminAuthenticatorQr} className="w-full rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200" disabled={loadingAdminQr}>
+                    <button onClick={loadAdminAuthenticatorQr} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm" disabled={loadingAdminQr}>
                       {loadingAdminQr ? "Loading Authenticator QR..." : "Show Admin Authenticator QR"}
                     </button>
                   )}
-                  <button onClick={() => setStep(0)} className="w-full rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200">New here? Create Account</button>
+                  <button onClick={() => setStep(0)} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">New here? Create Account</button>
                 </div>
               )}
 
               {step === 2 && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-lg font-semibold">Verify OTP</h2>
-                    <p className="text-sm text-slate-300">Enter 6-digit code from authenticator app.</p>
+                    <h2 className="font-['Fraunces'] text-2xl font-semibold text-slate-950">Verify OTP</h2>
+                    <p className="text-sm text-slate-600">Enter 6-digit code from authenticator app.</p>
                   </div>
 
-                  <div className="rounded-2xl border border-white/15 bg-slate-900/40 p-3">
-                    <label className="mb-1 block text-xs text-slate-300">MFA Token</label>
-                    <textarea value={mfaToken} onChange={(e) => setMfaToken(e.target.value)} rows="2" className="w-full rounded-xl border border-slate-300/20 bg-slate-950/50 p-2 text-xs outline-none" />
-                    <button onClick={() => copy(mfaToken, "MFA token")} className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 text-xs">Copy token</button>
+                  <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
+                    <label className="mb-1 block text-xs text-slate-600">MFA Token</label>
+                    <textarea value={mfaToken} onChange={(e) => setMfaToken(e.target.value)} rows="2" className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-2 text-xs outline-none" />
+                    <button onClick={() => copy(mfaToken, "MFA token")} className="mt-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm">Copy token</button>
                   </div>
 
                   <OtpSlots values={otp} setValues={setOtp} />
 
                   {showCheck && (
-                    <div className="rounded-2xl border border-emerald-300/50 bg-emerald-500/10 p-4 text-center animate-pop">
-                      <div className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full bg-emerald-400/20 text-2xl text-emerald-200">✓</div>
-                      <p className="text-sm text-emerald-200">Verified successfully</p>
+                    <div className="rounded-[28px] border border-emerald-200 bg-emerald-50 p-4 text-center animate-pop">
+                      <div className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full bg-emerald-500/10 text-2xl text-emerald-700">✓</div>
+                      <p className="text-sm text-emerald-700">Verified successfully</p>
                     </div>
                   )}
                 </div>
@@ -681,24 +711,24 @@
               {step === 3 && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-lg font-semibold">Profile Access</h2>
-                    <p className="text-sm text-slate-300">Session is active. Use secure actions below.</p>
+                    <h2 className="font-['Fraunces'] text-2xl font-semibold text-slate-950">Profile Access</h2>
+                    <p className="text-sm text-slate-600">Session is active. Use secure actions below.</p>
                   </div>
 
                   {isAdmin && (
-                    <button onClick={openUsersModal} className="w-full rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200">
+                    <button onClick={openUsersModal} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
                       Open Admin Panel
                     </button>
                   )}
 
-                  <div className="rounded-2xl border border-white/15 bg-slate-900/40 p-3 text-sm text-slate-300">
+                  <div className="rounded-[28px] border border-slate-200 bg-white p-3 text-sm text-slate-600 shadow-sm">
                     Access token is kept in memory and refresh token is stored in a secure HttpOnly cookie.
                   </div>
 
-                  <button onClick={onLogout} className="rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200">Logout</button>
+                  <button onClick={onLogout} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">Logout</button>
 
                   {profile && (
-                    <pre className="max-h-44 overflow-auto rounded-2xl border border-white/15 bg-slate-900/40 p-3 text-xs">
+                    <pre className="max-h-44 overflow-auto rounded-[28px] border border-slate-200 bg-white p-3 text-xs text-slate-700 shadow-sm">
                       {JSON.stringify(profile, null, 2)}
                     </pre>
                   )}
@@ -706,8 +736,8 @@
               )}
             </div>
 
-            <div className="mt-auto border-t border-white/10 bg-slate-950/30 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
-              <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
+            <div className="mt-auto border-t border-slate-200/80 bg-white/80 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+              <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
                 <button disabled={!prevEnabled} onClick={() => setStep((s) => Math.max(0, s - 1))} className="disabled:opacity-40">Back</button>
                 <span>{steps[step].label}</span>
               </div>
@@ -715,36 +745,36 @@
             </div>
 
             {showUsersModal && (
-              <div className="fixed inset-0 z-30 grid place-items-end bg-slate-950/70 p-4 sm:place-items-center">
-                <div className="glass w-full max-w-md rounded-2xl border border-white/20 p-4">
+              <div className="fixed inset-0 z-30 grid place-items-end bg-slate-950/35 p-4 backdrop-blur-sm sm:place-items-center">
+                <div className="glass w-full max-w-md rounded-[32px] border border-slate-200 p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Admin Panel</h3>
-                    <button onClick={() => setShowUsersModal(false)} className="rounded-lg border border-white/20 px-2 py-1 text-xs">Close</button>
+                    <h3 className="text-sm font-semibold text-slate-900">Admin Panel</h3>
+                    <button onClick={() => setShowUsersModal(false)} className="rounded-xl border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700">Close</button>
                   </div>
 
                   {usersLoading ? (
-                    <p className="text-xs text-slate-300">Loading users...</p>
+                    <p className="text-xs text-slate-600">Loading users...</p>
                   ) : usersList.length === 0 ? (
-                    <p className="text-xs text-slate-300">No users found.</p>
+                    <p className="text-xs text-slate-600">No users found.</p>
                   ) : (
                     <div className="max-h-[60vh] space-y-2 overflow-auto pr-1">
-                      <div className="grid grid-cols-[1.2fr_1fr_auto] gap-2 rounded-xl border border-white/10 bg-slate-900/30 px-2 py-1 text-[11px] text-slate-300">
+                      <div className="grid grid-cols-[1.2fr_1fr_auto] gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-500">
                         <span>Email / Username</span>
                         <span>User ID</span>
                         <span>Action</span>
                       </div>
                       {usersList.map((u) => (
-                        <div key={u.id} className="rounded-xl border border-white/15 bg-slate-900/35 p-2.5 text-xs">
+                        <div key={u.id} className="rounded-xl border border-slate-200 bg-white p-2.5 text-xs shadow-sm">
                           <div className="grid grid-cols-[1.2fr_1fr_auto] items-center gap-2">
                             <div>
-                              <p className="truncate font-semibold text-slate-100">{u.email || u.username}</p>
-                              <p className="text-[11px] text-slate-400">{formatDate(u.created_at)}</p>
+                              <p className="truncate font-semibold text-slate-900">{u.email || u.username}</p>
+                              <p className="text-[11px] text-slate-500">{formatDate(u.created_at)}</p>
                             </div>
-                            <p className="truncate text-slate-300">{u.id}</p>
+                            <p className="truncate text-slate-600">{u.id}</p>
                             {u.role === "admin" ? (
-                              <span className="rounded-lg border border-amber-300/40 bg-amber-500/10 px-2 py-1 text-amber-200">Protected</span>
+                              <span className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700">Protected</span>
                             ) : (
-                              <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-300/40 bg-rose-500/10 px-2 py-1 text-rose-200">Delete</button>
+                              <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-rose-700">Delete</button>
                             )}
                           </div>
                         </div>
