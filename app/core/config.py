@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     email_otp_subject: str = "Your SentinelAuth OS verification code"
     smtp_host: str = ""
     smtp_port: int = 587
-    smtp_use_starttls: bool = True
+    smtp_use_starttls: str | bool = True
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_from_email: str = ""

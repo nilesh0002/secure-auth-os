@@ -17,6 +17,12 @@ class EmailSender:
     def is_configured(self) -> bool:
         return bool(self.settings.smtp_host and self.settings.smtp_from_email)
 
+    def _smtp_use_starttls(self) -> bool:
+        value = self.settings.smtp_use_starttls
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
     def send_otp(self, to_email: str, otp_code: str) -> None:
         if not self.is_configured():
             raise EmailDeliveryError("SMTP is not configured")
@@ -36,7 +42,7 @@ class EmailSender:
 
         try:
             with smtplib.SMTP(self.settings.smtp_host, self.settings.smtp_port, timeout=15) as smtp:
-                if self.settings.smtp_use_starttls:
+                if self._smtp_use_starttls():
                     smtp.starttls()
                 if self.settings.smtp_username and self.settings.smtp_password:
                     smtp.login(self.settings.smtp_username, self.settings.smtp_password)
