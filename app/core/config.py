@@ -3,7 +3,7 @@ import base64
 import os
 import secrets
 
-from pydantic import Field
+from pydantic import Field, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_use_starttls: str | bool = True
     smtp_username: str = ""
-    smtp_password: str = ""
+    smtp_password: str = Field(default="", validation_alias=AliasChoices("SMTP_PASSWORD", "Mail"))
     smtp_from_email: str = ""
     auth_backend: str = "local"
     audit_log_path: str = "logs/audit.log"
