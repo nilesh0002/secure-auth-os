@@ -148,7 +148,14 @@ class AuthService:
                 self.email_sender.send_otp(user.email, code)
                 delivery_ok = True
             except EmailDeliveryError:
-                if not self.settings.expose_email_otp_in_response:
+                non_production = self.settings.environment.strip().lower() != "production"
+                if self.settings.expose_email_otp_in_response:
+                    test_otp = code
+                    delivery_hint = "Email delivery is unavailable. Using test OTP display in non-production mode."
+                elif non_production:
+                    test_otp = code
+                    delivery_hint = "Email delivery is unavailable. Using test OTP display in non-production mode."
+                else:
                     self.audit.record(
                         "mfa_email_otp_delivery_failed",
                         False,
@@ -160,7 +167,7 @@ class AuthService:
                         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                         detail="Email OTP delivery is unavailable. Contact support.",
                     )
-            if self.settings.expose_email_otp_in_response:
+            if self.settings.expose_email_otp_in_response and not test_otp:
                 test_otp = code
             detail = f"email={user.email} delivered={delivery_ok}"
             self.audit.record("mfa_email_otp_issued", True, user_id=user.id, ip_address=ip_address, detail=detail)
