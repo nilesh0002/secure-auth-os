@@ -291,7 +291,6 @@
       const [otp, setOtp] = useState(initialOtp);
       const [mfaMethod, setMfaMethod] = useState("email");
       const [deliveryHint, setDeliveryHint] = useState("");
-      const [testOtp, setTestOtp] = useState("");
 
       const [mfaSetup, setMfaSetup] = useState({ uri: "", qr: "" });
       const [tokens, setTokens] = useState({ access: "" });
@@ -394,7 +393,6 @@
           setMfaToken(data.mfa_token || "");
           setMfaMethod((data.mfa_method || "email").toLowerCase());
           setDeliveryHint(data.delivery_hint || "");
-          setTestOtp(data.test_otp || "");
           setStep(2);
           pulse(true);
           showBanner(data.delivery_hint || "Login successful. Enter OTP now.", "ok");
@@ -495,7 +493,6 @@
         setMfaToken("");
         setMfaMethod("email");
         setDeliveryHint("");
-        setTestOtp("");
         setOtp([...initialOtp]);
         setStep(1);
         showBanner("Logged out", "ok");
@@ -672,12 +669,6 @@
                   {deliveryHint && (
                     <div className="rounded-2xl border border-white/15 bg-slate-900/40 p-3 text-xs text-slate-300">
                       {deliveryHint}
-                    </div>
-                  )}
-
-                  {testOtp && (
-                    <div className="rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-xs text-amber-100">
-                      Test OTP: <span className="font-semibold">{testOtp}</span>
                     </div>
                   )}
 
