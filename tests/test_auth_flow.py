@@ -235,3 +235,30 @@ def test_bootstrap_admin_mfa_setup_endpoint_returns_qr(client):
     payload = response.json()
     assert payload["mfa_setup_uri"].startswith("otpauth://")
     assert payload["qr_code_data_uri"].startswith("data:image/png;base64,")
+
+
+def test_forgot_password_and_reset_password_flow(client):
+    username, email = _unique_user("forgot")
+    original_password = _strong_password()
+    new_password = "Recovered!789"
+
+    register_response = _register(client, username, email, original_password, "user")
+    assert register_response.status_code == 200
+
+    forgot_response = client.post("/api/forgot-password", json={"email": email})
+    assert forgot_response.status_code == 200
+    forgot_payload = forgot_response.json()
+    assert forgot_payload["detail"]
+    assert forgot_payload["debug_reset_token"]
+
+    reset_response = client.post(
+        "/api/reset-password",
+        json={"token": forgot_payload["debug_reset_token"], "new_password": new_password},
+    )
+    assert reset_response.status_code == 200
+
+    old_login = client.post("/api/login", json={"username": username, "password": original_password})
+    assert old_login.status_code == 401
+
+    new_login = client.post("/api/login", json={"username": username, "password": new_password})
+    assert new_login.status_code == 200
