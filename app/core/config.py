@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     smtp_username: str = ""
     smtp_password: str = Field(default="", validation_alias=AliasChoices("SMTP_PASSWORD", "Mail"))
     smtp_from_email: str = ""
+    email_delivery_provider: str = "smtp"
+    resend_api_key: str = ""
+    resend_from_email: str = ""
+    resend_api_base: str = "https://api.resend.com"
     auth_backend: str = "local"
     audit_log_path: str = "logs/audit.log"
     refresh_cookie_name: str = "refresh_token"
