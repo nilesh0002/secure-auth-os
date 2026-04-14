@@ -779,6 +779,7 @@
                   {forgotOpen && (
                     <div className="space-y-3 rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
                       <p className="text-xs text-slate-600">Request a reset token by email, then set a new password.</p>
+                      <p className="text-xs text-slate-600">Reset email is sent to that account's registered personal email. Admin inbox is used only when resetting the admin account.</p>
                       <FloatingInput id="forgot-email" label="Account Email" value={forgot.email} onChange={(e) => setForgot({ ...forgot, email: e.target.value })} icon="✉" />
                       <button onClick={onForgotPasswordRequest} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                         Send Reset Token
