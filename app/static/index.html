@@ -354,6 +354,15 @@
         return String(d);
       };
 
+      const isStrongPassword = (password) => {
+        if (!password || password.length < 12) return false;
+        if (!/[A-Z]/.test(password)) return false;
+        if (!/[a-z]/.test(password)) return false;
+        if (!/[0-9]/.test(password)) return false;
+        if (!/[^A-Za-z0-9]/.test(password)) return false;
+        return true;
+      };
+
       const roleFromJwt = (token) => {
         try {
           const payload = JSON.parse(atob((token || "").split(".")[1] || ""));
@@ -457,6 +466,10 @@
       const onResetPassword = async () => {
         if (!forgot.token.trim() || !forgot.newPassword) {
           showBanner("Enter reset token and new password", "error");
+          return;
+        }
+        if (!isStrongPassword(forgot.newPassword)) {
+          showBanner("Password must be 12+ chars with uppercase, lowercase, number, and special character.", "error");
           return;
         }
 
@@ -772,6 +785,8 @@
                       </button>
                       <FloatingInput id="forgot-token" label="Reset Token" value={forgot.token} onChange={(e) => setForgot({ ...forgot, token: e.target.value })} icon="🔐" />
                       <FloatingInput id="forgot-new-pass" type="password" label="New Password" value={forgot.newPassword} onChange={(e) => setForgot({ ...forgot, newPassword: e.target.value })} icon="🆕" />
+                      <PasswordStrength password={forgot.newPassword} />
+                      <p className="text-xs text-slate-600">Password rules: at least 12 characters with uppercase, lowercase, number, and special character.</p>
                       <button onClick={onResetPassword} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                         Reset Password
                       </button>
