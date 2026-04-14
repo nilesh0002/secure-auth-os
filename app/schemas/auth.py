@@ -61,6 +61,20 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=1, max_length=128)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    detail: str
+    debug_reset_token: str | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=20)
+    new_password: str = Field(min_length=1, max_length=128)
+
+
 class BootstrapAdminMfaRequest(BaseModel):
     username: str = Field(min_length=3, max_length=64)
     password: str = Field(min_length=1, max_length=128)

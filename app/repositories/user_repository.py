@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.email_otp_challenge import EmailOtpChallenge
 from app.models.password_history import PasswordHistory
+from app.models.password_reset_token import PasswordResetToken
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.repositories.base_repository import BaseRepository
@@ -111,4 +112,28 @@ class UserRepository(BaseRepository):
 
     def consume_email_otp_challenge(self, challenge: EmailOtpChallenge, now: datetime) -> None:
         challenge.consumed_at = now
+        self.db.flush()
+
+    def create_password_reset_token(self, reset_token: PasswordResetToken) -> PasswordResetToken:
+        self.db.add(reset_token)
+        self.db.flush()
+        return reset_token
+
+    def get_password_reset_token_by_hash(self, token_hash: str) -> PasswordResetToken | None:
+        statement = select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+        return self.db.execute(statement).scalar_one_or_none()
+
+    def invalidate_active_password_reset_tokens(self, user_id: str, now: datetime) -> None:
+        statement = select(PasswordResetToken).where(
+            PasswordResetToken.user_id == user_id,
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.expires_at > now,
+        )
+        active = self.db.execute(statement).scalars().all()
+        for token in active:
+            token.used_at = now
+        self.db.flush()
+
+    def mark_password_reset_token_used(self, token: PasswordResetToken, now: datetime) -> None:
+        token.used_at = now
         self.db.flush()

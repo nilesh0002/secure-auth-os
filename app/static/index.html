@@ -314,6 +314,8 @@
 
       const [reg, setReg] = useState({ username: "", email: "", password: "", role: "user" });
       const [login, setLogin] = useState({ username: "", password: "" });
+      const [forgotOpen, setForgotOpen] = useState(false);
+      const [forgot, setForgot] = useState({ email: "", token: "", newPassword: "" });
 
       const [mfaToken, setMfaToken] = useState("");
       const [otp, setOtp] = useState(initialOtp);
@@ -430,6 +432,48 @@
         }
       };
 
+      const onForgotPasswordRequest = async () => {
+        if (!forgot.email.trim()) {
+          showBanner("Enter your account email for reset", "error");
+          return;
+        }
+
+        try {
+          setLoading(true);
+          const data = await api("/api/forgot-password", "POST", { email: forgot.email.trim() });
+          if (data?.debug_reset_token) {
+            setForgot((prev) => ({ ...prev, token: data.debug_reset_token }));
+            showBanner("Reset token generated (test mode). Check the form below.", "ok");
+          } else {
+            showBanner(data?.detail || "If the account exists, reset instructions were sent.", "ok");
+          }
+        } catch (err) {
+          showBanner(parseError(err), "error");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const onResetPassword = async () => {
+        if (!forgot.token.trim() || !forgot.newPassword) {
+          showBanner("Enter reset token and new password", "error");
+          return;
+        }
+
+        try {
+          setLoading(true);
+          const data = await api("/api/reset-password", "POST", { token: forgot.token.trim(), new_password: forgot.newPassword });
+          showBanner(data?.detail || "Password reset successfully", "ok");
+          setForgotOpen(false);
+          setLogin((prev) => ({ ...prev, password: "" }));
+          setForgot({ email: "", token: "", newPassword: "" });
+        } catch (err) {
+          showBanner(parseError(err), "error");
+        } finally {
+          setLoading(false);
+        }
+      };
+
       const loadAdminAuthenticatorQr = async () => {
         if (!login.username.trim() || !login.password) {
           showBanner("Enter admin username and password first.", "error");
@@ -518,6 +562,8 @@
         setUsersList([]);
         setMfaToken("");
         setMfaMethod("totp");
+        setForgotOpen(false);
+        setForgot({ email: "", token: "", newPassword: "" });
         setOtp([...initialOtp]);
         setStep(1);
         showBanner("Logged out", "ok");
@@ -707,10 +753,29 @@
                   <FloatingInput id="login-user" label="Username" value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} icon="👤" />
                   <FloatingInput id="login-pass" type="password" label="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} icon="🔑" />
                   <p className="text-xs text-slate-500">Admin Panel appears after successful admin OTP login.</p>
-                  {login.username.trim().toLowerCase() === "admin" && (
+                  {mfaMethod === "totp" && login.username.trim() && (
                     <button onClick={loadAdminAuthenticatorQr} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm" disabled={loadingAdminQr}>
                       {loadingAdminQr ? "Loading Authenticator QR..." : "Show Admin Authenticator QR"}
                     </button>
+                  )}
+
+                  <button onClick={() => setForgotOpen((v) => !v)} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                    {forgotOpen ? "Hide Forgot Password" : "Forgot Password?"}
+                  </button>
+
+                  {forgotOpen && (
+                    <div className="space-y-3 rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
+                      <p className="text-xs text-slate-600">Request a reset token by email, then set a new password.</p>
+                      <FloatingInput id="forgot-email" label="Account Email" value={forgot.email} onChange={(e) => setForgot({ ...forgot, email: e.target.value })} icon="✉" />
+                      <button onClick={onForgotPasswordRequest} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                        Send Reset Token
+                      </button>
+                      <FloatingInput id="forgot-token" label="Reset Token" value={forgot.token} onChange={(e) => setForgot({ ...forgot, token: e.target.value })} icon="🔐" />
+                      <FloatingInput id="forgot-new-pass" type="password" label="New Password" value={forgot.newPassword} onChange={(e) => setForgot({ ...forgot, newPassword: e.target.value })} icon="🆕" />
+                      <button onClick={onResetPassword} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                        Reset Password
+                      </button>
+                    </div>
                   )}
                   <button onClick={() => setStep(0)} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">New here? Create Account</button>
                 </div>

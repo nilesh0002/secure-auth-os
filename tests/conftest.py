@@ -35,6 +35,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     from app.models.audit_log import AuditLog  # noqa: F401
     from app.models.email_otp_challenge import EmailOtpChallenge  # noqa: F401
     from app.models.password_history import PasswordHistory  # noqa: F401
+    from app.models.password_reset_token import PasswordResetToken  # noqa: F401
     from app.models.refresh_token import RefreshToken  # noqa: F401
     from app.models.user import User  # noqa: F401
 

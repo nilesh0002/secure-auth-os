@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     email_otp_max_attempts: int = 5
     expose_email_otp_in_response: bool = False
     email_otp_subject: str = "Your SentinelAuth OS verification code"
+    password_reset_ttl_minutes: int = 30
+    password_reset_subject: str = "Reset your SentinelAuth OS password"
+    password_reset_url_base: str = ""
+    expose_password_reset_token_in_response: bool = False
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_use_starttls: str | bool = True

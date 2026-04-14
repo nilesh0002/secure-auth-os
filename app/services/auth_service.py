@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.security import decode_token, hash_password, password_matches_hash, sha256_hex
 from app.models.enums import UserRole
+from app.models.password_reset_token import PasswordResetToken
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
@@ -35,6 +37,12 @@ class LoginResult:
     mfa_method: str
     delivery_hint: str | None = None
     test_otp: str | None = None
+
+
+@dataclass
+class ForgotPasswordResult:
+    detail: str
+    debug_reset_token: str | None = None
 
 
 @dataclass
@@ -255,6 +263,81 @@ class AuthService:
             self.users.revoke_refresh_token(stored)
             self.db.commit()
         self.audit.record("logout", True, user_id=payload.get("sub"), ip_address=ip_address, detail="logout")
+
+    def forgot_password(self, email: str, ip_address: str | None = None) -> ForgotPasswordResult:
+        normalized_email = email.strip().lower()
+        user = self.users.get_by_email(normalized_email)
+        detail = "If the account exists, password reset instructions were sent."
+        if not user or not user.is_active:
+            self.audit.record("forgot_password", False, ip_address=ip_address, detail=f"unknown email={normalized_email}")
+            return ForgotPasswordResult(detail=detail)
+
+        now = datetime.now(timezone.utc)
+        self.users.invalidate_active_password_reset_tokens(user.id, now)
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = sha256_hex(raw_token)
+        reset_token = PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=now + timedelta(minutes=self.settings.password_reset_ttl_minutes),
+        )
+        self.users.create_password_reset_token(reset_token)
+        self.db.commit()
+
+        debug_token = None
+        try:
+            self.email_sender.send_password_reset(user.email, raw_token)
+        except EmailDeliveryError:
+            if self.settings.environment.strip().lower() != "production" or self.settings.expose_password_reset_token_in_response:
+                debug_token = raw_token
+            self.audit.record(
+                "forgot_password_delivery_failed",
+                False,
+                user_id=user.id,
+                ip_address=ip_address,
+                detail="smtp not configured or delivery failed",
+            )
+            return ForgotPasswordResult(detail=detail, debug_reset_token=debug_token)
+
+        self.audit.record("forgot_password", True, user_id=user.id, ip_address=ip_address, detail=f"email={user.email}")
+        return ForgotPasswordResult(detail=detail, debug_reset_token=debug_token)
+
+    def reset_password(self, token: str, new_password: str, ip_address: str | None = None) -> None:
+        token_hash = sha256_hex(token.strip())
+        reset_token = self.users.get_password_reset_token_by_hash(token_hash)
+        now = datetime.now(timezone.utc)
+        if not reset_token:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token")
+
+        expires_at = self._as_utc(reset_token.expires_at)
+        if reset_token.used_at is not None or not expires_at or expires_at <= now:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token")
+
+        user = self.users.get_by_id(reset_token.user_id)
+        if not user or not user.is_active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset request")
+
+        try:
+            validate_password_strength(new_password)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+        recent_hashes = self.users.get_recent_password_hashes(user.id, self.settings.password_history_count)
+        if password_was_recently_used(new_password, recent_hashes):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"New password must not match your last {self.settings.password_history_count} passwords",
+            )
+
+        new_hash = hash_password(new_password)
+        user.password_hash = new_hash
+        user.password_changed_at = now
+        user.password_expires_at = now + timedelta(days=self.settings.password_expiry_days)
+        self.users.add_password_history(user.id, new_hash)
+        self.users.reset_failed_attempts(user)
+        self.users.mark_password_reset_token_used(reset_token, now)
+        self.db.commit()
+        self.audit.record("reset_password", True, user_id=user.id, ip_address=ip_address, detail="password reset")
 
     def can_reuse_password(self, user_id: str, candidate_password: str) -> bool:
         history = self.users.get_recent_password_hashes(user_id, self.settings.password_history_count)

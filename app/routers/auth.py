@@ -13,10 +13,13 @@ from app.schemas.auth import (
     BootstrapAdminMfaRequest,
     BootstrapAdminMfaResponse,
     ChangePasswordRequest,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     LoginRequest,
     LogoutRequest,
     MfaVerifyRequest,
     PendingMfaResponse,
+    ResetPasswordRequest,
     RefreshRequest,
     RegisterRequest,
     RegistrationResponse,
@@ -152,6 +155,18 @@ def change_password(payload: ChangePasswordRequest, request: Request, user=Depen
         ip_address=request.client.host if request.client else None,
     )
     return {"detail": "Password changed successfully"}
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+def forgot_password(payload: ForgotPasswordRequest, request: Request, service: AuthService = Depends(_service)):
+    result = service.forgot_password(payload.email, ip_address=request.client.host if request.client else None)
+    return ForgotPasswordResponse(detail=result.detail, debug_reset_token=result.debug_reset_token)
+
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPasswordRequest, request: Request, service: AuthService = Depends(_service)):
+    service.reset_password(payload.token, payload.new_password, ip_address=request.client.host if request.client else None)
+    return {"detail": "Password reset successfully"}
 
 
 @router.get("/me", response_model=UserRead)
