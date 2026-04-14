@@ -106,6 +106,7 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 - For local/testing only, you can set `EXPOSE_EMAIL_OTP_IN_RESPONSE=true` to include the OTP in the login response.
 - Keep `EXPOSE_EMAIL_OTP_IN_RESPONSE=false` in production.
 - Configure SMTP for real delivery: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`.
+- Or use direct API delivery with Resend: set `EMAIL_DELIVERY_PROVIDER=resend`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`.
 - If SMTP is not configured and OTP exposure is disabled, login will return `503` for email OTP requests.
 - Password reset uses a separate reset token with `PASSWORD_RESET_TTL_MINUTES` and optional `PASSWORD_RESET_URL_BASE`.
 
