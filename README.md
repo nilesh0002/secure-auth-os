@@ -74,6 +74,8 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 - `POST /api/login`
 - `POST /api/verify-mfa`
 - `POST /api/change-password`
+- `POST /api/forgot-password`
+- `POST /api/reset-password`
 - `POST /api/refresh`
 - `POST /api/logout`
 - `GET /api/me`
@@ -105,6 +107,7 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 - Keep `EXPOSE_EMAIL_OTP_IN_RESPONSE=false` in production.
 - Configure SMTP for real delivery: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`.
 - If SMTP is not configured and OTP exposure is disabled, login will return `503` for email OTP requests.
+- Password reset uses a separate reset token with `PASSWORD_RESET_TTL_MINUTES` and optional `PASSWORD_RESET_URL_BASE`.
 
 ## CLI
 
