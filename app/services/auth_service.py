@@ -151,12 +151,12 @@ class AuthService:
             code = self.email_otp.issue_challenge(user)
             self.db.commit()
             delivery_hint = self.email_otp.delivery_hint(user.email)
+            non_production = self.settings.environment.strip().lower() != "production"
             delivery_ok = False
             try:
                 self.email_sender.send_otp(user.email, code)
                 delivery_ok = True
             except EmailDeliveryError:
-                non_production = self.settings.environment.strip().lower() != "production"
                 if self.settings.expose_email_otp_in_response:
                     test_otp = code
                     delivery_hint = "Email delivery is unavailable. Using test OTP display in non-production mode."
@@ -175,6 +175,9 @@ class AuthService:
                         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                         detail="Email OTP delivery is unavailable. Contact support.",
                     )
+            if non_production:
+                # Keep local/dev login usable even when mailbox access is delayed.
+                test_otp = code
             if self.settings.expose_email_otp_in_response and not test_otp:
                 test_otp = code
             detail = f"email={user.email} delivered={delivery_ok}"
@@ -197,7 +200,14 @@ class AuthService:
 
         mfa_method = self.settings.mfa_method.strip().lower()
         if mfa_method == "email":
-            if not self.email_otp.verify_challenge(user.id, normalized_otp):
+            email_verified = self.email_otp.verify_challenge(user.id, normalized_otp)
+            # Admins can recover from mailbox delivery issues by using enrolled authenticator OTP.
+            admin_totp_verified = bool(
+                user.role == UserRole.admin.value
+                and user.mfa_secret_encrypted
+                and self.mfa.verify_otp(user.mfa_secret_encrypted, normalized_otp)
+            )
+            if not email_verified and not admin_totp_verified:
                 self.db.commit()
                 self.audit.record("mfa", False, user_id=user.id, ip_address=ip_address, detail="bad email otp")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
