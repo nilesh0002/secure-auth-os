@@ -320,6 +320,8 @@
       const [mfaToken, setMfaToken] = useState("");
       const [otp, setOtp] = useState(initialOtp);
       const [mfaMethod, setMfaMethod] = useState("email");
+      const [emailOtpHint, setEmailOtpHint] = useState("");
+      const [testOtp, setTestOtp] = useState("");
 
       const [mfaSetup, setMfaSetup] = useState({ uri: "", qr: "" });
       const [tokens, setTokens] = useState({ access: "" });
@@ -428,11 +430,19 @@
         try {
           setLoading(true);
           const data = await api("/api/login", "POST", { username: login.username.trim(), password: login.password });
+          const method = (data.mfa_method || "totp").toLowerCase();
           setMfaToken(data.mfa_token || "");
-          setMfaMethod((data.mfa_method || "totp").toLowerCase());
+          setMfaMethod(method);
+          setEmailOtpHint(data.delivery_hint || "");
+          setTestOtp(data.test_otp || "");
+          setOtp([...initialOtp]);
           setStep(2);
           pulse(true);
-          showBanner("Login successful. Open your authenticator app and enter the code.", "ok");
+          if (method === "email") {
+            showBanner(data.delivery_hint || "Login successful. Check your email for the OTP code.", "ok");
+          } else {
+            showBanner("Login successful. Open your authenticator app and enter the code.", "ok");
+          }
         } catch (err) {
           pulse(false);
           showBanner(parseError(err), "error");
@@ -575,6 +585,8 @@
         setUsersList([]);
         setMfaToken("");
         setMfaMethod("email");
+        setEmailOtpHint("");
+        setTestOtp("");
         setForgotOpen(false);
         setForgot({ email: "", token: "", newPassword: "" });
         setOtp([...initialOtp]);
@@ -804,7 +816,16 @@
                     <p className="text-sm text-slate-600">
                       {mfaMethod === "email" ? "Enter 6-digit code from your email." : "Enter 6-digit code from authenticator app."}
                     </p>
+                    {mfaMethod === "email" && emailOtpHint && (
+                      <p className="mt-1 text-xs text-slate-500">{emailOtpHint}</p>
+                    )}
                   </div>
+
+                  {mfaMethod === "email" && !!testOtp && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Test OTP (non-production): <span className="font-semibold tracking-wide">{testOtp}</span>
+                    </div>
+                  )}
 
                   <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
                     <label className="mb-1 block text-xs text-slate-600">MFA Token</label>

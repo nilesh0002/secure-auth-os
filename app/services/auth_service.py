@@ -184,6 +184,7 @@ class AuthService:
         return LoginResult(mfa_token=mfa_token, mfa_method=mfa_method or "totp", delivery_hint=delivery_hint, test_otp=test_otp)
 
     def verify_mfa(self, mfa_token: str, otp: str, ip_address: str | None = None, user_agent: str | None = None) -> AuthenticatedSession:
+        normalized_otp = "".join(ch for ch in str(otp).strip() if ch.isdigit())
         try:
             payload = decode_token(mfa_token, self.settings.secret_key)
         except ValueError as exc:
@@ -196,13 +197,13 @@ class AuthService:
 
         mfa_method = self.settings.mfa_method.strip().lower()
         if mfa_method == "email":
-            if not self.email_otp.verify_challenge(user.id, otp):
+            if not self.email_otp.verify_challenge(user.id, normalized_otp):
                 self.db.commit()
                 self.audit.record("mfa", False, user_id=user.id, ip_address=ip_address, detail="bad email otp")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
             self.db.commit()
         else:
-            if not user.mfa_secret_encrypted or not self.mfa.verify_otp(user.mfa_secret_encrypted, otp):
+            if not user.mfa_secret_encrypted or not self.mfa.verify_otp(user.mfa_secret_encrypted, normalized_otp):
                 self.audit.record("mfa", False, user_id=user.id, ip_address=ip_address, detail="bad otp")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
 
