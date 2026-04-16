@@ -323,7 +323,7 @@
       const [emailOtpHint, setEmailOtpHint] = useState("");
       const [testOtp, setTestOtp] = useState("");
 
-      const [mfaSetup, setMfaSetup] = useState({ uri: "", qr: "" });
+      const [mfaSetup, setMfaSetup] = useState({ uri: "", qr: "", source: "" });
       const [tokens, setTokens] = useState({ access: "" });
       const [profile, setProfile] = useState(null);
       const [sessionRole, setSessionRole] = useState("");
@@ -335,6 +335,7 @@
       const [loadingAdminQr, setLoadingAdminQr] = useState(false);
 
       const isAdmin = (sessionRole || profile?.role) === "admin";
+      const hasRegistrationQr = mfaSetup.source === "register" && !!mfaSetup.qr;
 
       const otpCode = otp.join("");
 
@@ -408,11 +409,13 @@
         try {
           setLoading(true);
           const data = await api("/api/register", "POST", { ...reg, username: reg.username.trim(), email: reg.email.trim() });
-          setMfaSetup({ uri: data.mfa_setup_uri || "", qr: data.qr_code_data_uri || "" });
+          const uri = data.mfa_setup_uri || "";
+          const qr = data.qr_code_data_uri || "";
+          setMfaSetup({ uri, qr, source: qr ? "register" : "" });
           setLogin({ username: reg.username.trim(), password: reg.password });
           setStep(1);
           pulse(true);
-          showBanner("Account created. Scan QR before login.", "ok");
+          showBanner(qr ? "Account created. Scan QR before login." : "Account created. Continue to login.", "ok");
         } catch (err) {
           pulse(false);
           showBanner(parseError(err), "error");
@@ -508,7 +511,7 @@
             username: login.username.trim(),
             password: login.password,
           });
-          setMfaSetup({ uri: data.mfa_setup_uri || "", qr: data.qr_code_data_uri || "" });
+          setMfaSetup({ uri: data.mfa_setup_uri || "", qr: data.qr_code_data_uri || "", source: "admin" });
           showBanner("Authenticator QR loaded.", "ok");
         } catch (err) {
           showBanner(parseError(err), "error");
@@ -750,7 +753,7 @@
 
                   <button onClick={() => setStep(1)} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">Already have an account? Login</button>
 
-                  {!!mfaSetup.qr && (
+                  {hasRegistrationQr && (
                     <div className="space-y-2 rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
                       <p className="text-xs text-slate-600">Scan this QR in Authenticator:</p>
                       <img src={mfaSetup.qr} alt="MFA QR" className="mx-auto w-44 rounded-2xl bg-white p-2 shadow-sm" />
@@ -767,7 +770,7 @@
                     <p className="text-sm text-slate-600">Use your account to request OTP challenge.</p>
                   </div>
 
-                  {!!mfaSetup.qr && (
+                  {hasRegistrationQr && (
                     <div className="space-y-2 rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
                       <p className="text-xs text-slate-600">Scan this QR in Authenticator (if not done yet):</p>
                       <img src={mfaSetup.qr} alt="MFA QR" className="mx-auto w-44 rounded-2xl bg-white p-2 shadow-sm" />
@@ -805,7 +808,15 @@
                       </button>
                     </div>
                   )}
-                  <button onClick={() => setStep(0)} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">New here? Create Account</button>
+                  <button
+                    onClick={() => {
+                      setMfaSetup((prev) => (prev.source === "admin" ? { uri: "", qr: "", source: "" } : prev));
+                      setStep(0);
+                    }}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm"
+                  >
+                    New here? Create Account
+                  </button>
                 </div>
               )}
 
