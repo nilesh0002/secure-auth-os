@@ -9,7 +9,7 @@ SentinelAuth OS is a modular authentication service built with FastAPI, SQLAlche
 
 - User registration and login
 - Argon2 password hashing with automatic salting
-- Configurable MFA: TOTP app (QR enrollment) or email OTP
+- Configurable MFA: email OTP (default) with optional TOTP authenticator mode
 - Strong password policy enforcement
 - Password history tracking for reuse prevention
 - Password expiry support
@@ -88,24 +88,31 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 - RBAC checks are enforced through dependencies, not client-side logic.
 - Audit events are stored in the database and also written to a rotating log file.
 
-## MFA Flow
+## MFA Flow (Default: Email OTP)
 
 1. Register a user.
-2. If `MFA_METHOD=totp`, the API returns a provisioning URI and QR-code data URI.
-3. If `MFA_METHOD=email`, no authenticator app is needed; login issues a one-time email OTP challenge.
-4. Log in with username and password.
+2. In the default profile (`MFA_METHOD=email`), no authenticator app is needed.
+3. Log in with username and password.
+4. API issues an email OTP challenge and returns an MFA token.
 5. Submit the MFA token and OTP code to `/api/verify-mfa`.
 6. Receive access and refresh tokens.
 
-### Email OTP Mode (Optional)
+### Email OTP Mode (Default)
 
-- Set `MFA_METHOD=email` to replace authenticator-app OTP with email OTP.
+- `MFA_METHOD=email` keeps authentication in email-only OTP mode.
 - For local/testing only, you can set `EXPOSE_EMAIL_OTP_IN_RESPONSE=true` to include the OTP in the login response.
 - Keep `EXPOSE_EMAIL_OTP_IN_RESPONSE=false` in production.
 - Configure SMTP for real delivery: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`.
 - Or use direct API delivery with Resend: set `EMAIL_DELIVERY_PROVIDER=resend`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`.
 - If SMTP is not configured and OTP exposure is disabled, login will return `503` for email OTP requests.
 - Password reset uses a separate reset token with `PASSWORD_RESET_TTL_MINUTES` and optional `PASSWORD_RESET_URL_BASE`.
+
+### Authenticator Mode (Optional Feature)
+
+- Set `MFA_METHOD=totp` to switch from email OTP to authenticator-app OTP.
+- On registration, the API returns `mfa_setup_uri` and `qr_code_data_uri` for enrollment.
+- Users scan the QR code in Google Authenticator, Microsoft Authenticator, Authy, or similar TOTP apps.
+- Login still starts with username/password, then `/api/verify-mfa` expects a 6-digit TOTP code.
 
 ## Vercel Notes
 

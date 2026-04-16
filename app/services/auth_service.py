@@ -200,14 +200,7 @@ class AuthService:
 
         mfa_method = self.settings.mfa_method.strip().lower()
         if mfa_method == "email":
-            email_verified = self.email_otp.verify_challenge(user.id, normalized_otp)
-            # Admins can recover from mailbox delivery issues by using enrolled authenticator OTP.
-            admin_totp_verified = bool(
-                user.role == UserRole.admin.value
-                and user.mfa_secret_encrypted
-                and self.mfa.verify_otp(user.mfa_secret_encrypted, normalized_otp)
-            )
-            if not email_verified and not admin_totp_verified:
+            if not self.email_otp.verify_challenge(user.id, normalized_otp):
                 self.db.commit()
                 self.audit.record("mfa", False, user_id=user.id, ip_address=ip_address, detail="bad email otp")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
