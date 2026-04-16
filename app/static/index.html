@@ -332,7 +332,6 @@
       const [showUsersModal, setShowUsersModal] = useState(false);
       const [usersList, setUsersList] = useState([]);
       const [usersLoading, setUsersLoading] = useState(false);
-      const [loadingAdminQr, setLoadingAdminQr] = useState(false);
 
       const isAdmin = (sessionRole || profile?.role) === "admin";
       const hasRegistrationQr = mfaSetup.source === "register" && !!mfaSetup.qr;
@@ -497,26 +496,6 @@
           showBanner(parseError(err), "error");
         } finally {
           setLoading(false);
-        }
-      };
-
-      const loadAdminAuthenticatorQr = async () => {
-        if (!login.username.trim() || !login.password) {
-          showBanner("Enter admin username and password first.", "error");
-          return;
-        }
-        try {
-          setLoadingAdminQr(true);
-          const data = await api("/api/bootstrap-admin/mfa-setup", "POST", {
-            username: login.username.trim(),
-            password: login.password,
-          });
-          setMfaSetup({ uri: data.mfa_setup_uri || "", qr: data.qr_code_data_uri || "", source: "admin" });
-          showBanner("Authenticator QR loaded.", "ok");
-        } catch (err) {
-          showBanner(parseError(err), "error");
-        } finally {
-          setLoadingAdminQr(false);
         }
       };
 
@@ -781,11 +760,6 @@
                   <FloatingInput id="login-user" label="Username" value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} icon="👤" />
                   <FloatingInput id="login-pass" type="password" label="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} icon="🔑" />
                   <p className="text-xs text-slate-500">Admin Panel appears after successful admin OTP login.</p>
-                  {mfaMethod === "totp" && login.username.trim() && (
-                    <button onClick={loadAdminAuthenticatorQr} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm" disabled={loadingAdminQr}>
-                      {loadingAdminQr ? "Loading Authenticator QR..." : "Show Admin Authenticator QR"}
-                    </button>
-                  )}
 
                   <button onClick={() => setForgotOpen((v) => !v)} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
                     {forgotOpen ? "Hide Forgot Password" : "Forgot Password?"}
@@ -810,7 +784,6 @@
                   )}
                   <button
                     onClick={() => {
-                      setMfaSetup((prev) => (prev.source === "admin" ? { uri: "", qr: "", source: "" } : prev));
                       setStep(0);
                     }}
                     className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm"
