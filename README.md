@@ -35,13 +35,7 @@ pip install -e .[dev]
 - `DATA_ENCRYPTION_KEY` must be a 32-byte urlsafe base64 value
 - `DATABASE_URL` can point to SQLite for local development or PostgreSQL for deployment
 
-4. Initialize the database:
-
-```bash
-python cli.py init-db
-```
-
-5. Run the API:
+4. Run the API. Database tables are created automatically on startup:
 
 ```bash
 uvicorn app.main:app --reload
@@ -62,7 +56,7 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 
 3. The Vercel entrypoint is [api/index.py](api/index.py), which exposes the FastAPI app.
 
-4. If you want the API at the root domain, the included rewrite routes all traffic to the Python function.
+4. The bundled rewrite routes all traffic to the Python function, while `app/static/index.html` provides the landing page response for `/`.
 
 5. Run database migrations or table creation against the managed database before production use.
 
@@ -70,6 +64,7 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 
 - `GET /` (public landing page)
 - `GET /health` (public health check)
+- `POST /api/bootstrap-admin/mfa-setup` (bootstrap admin-only MFA enrollment)
 - `POST /api/register`
 - `POST /api/login`
 - `POST /api/verify-mfa`
@@ -79,6 +74,8 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 - `POST /api/refresh`
 - `POST /api/logout`
 - `GET /api/me`
+- `GET /api/users` (admin only)
+- `DELETE /api/users/{user_id}` (admin only)
 - `GET /api/admin/health`
 
 ## Security Notes
@@ -109,14 +106,6 @@ Vercel should use a managed PostgreSQL database such as Neon, Supabase, or Verce
 - Or use direct API delivery with Resend: set `EMAIL_DELIVERY_PROVIDER=resend`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`.
 - If SMTP is not configured and OTP exposure is disabled, login will return `503` for email OTP requests.
 - Password reset uses a separate reset token with `PASSWORD_RESET_TTL_MINUTES` and optional `PASSWORD_RESET_URL_BASE`.
-
-## CLI
-
-Create a user manually:
-
-```bash
-python cli.py create-user alice alice@example.com --role admin
-```
 
 ## Vercel Notes
 

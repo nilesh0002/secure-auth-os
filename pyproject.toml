@@ -22,8 +22,7 @@ dependencies = [
   "qrcode[pil]>=7.4.2",
   "cryptography>=42.0.0",
   "python-jose[cryptography]>=3.3.0",
-  "email-validator>=2.2.0",
-  "typer>=0.12.5"
+  "email-validator>=2.2.0"
 ]
 
 [project.optional-dependencies]
