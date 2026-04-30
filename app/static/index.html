@@ -10,6 +10,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: "class",
       theme: {
         extend: {
           colors: {
@@ -130,6 +131,44 @@
         align-items: stretch;
       }
     }
+
+    html.dark .bg-white { background-color: #1e293b !important; }
+    html.dark .bg-white\/80 { background-color: rgba(30, 41, 59, 0.8) !important; }
+    html.dark .bg-white\/90 { background-color: rgba(30, 41, 59, 0.9) !important; }
+    html.dark .text-slate-900 { color: #f8fafc !important; }
+    html.dark .text-slate-950 { color: #ffffff !important; }
+    html.dark .text-slate-700 { color: #e2e8f0 !important; }
+    html.dark .text-slate-600 { color: #cbd5e1 !important; }
+    html.dark .text-slate-500 { color: #94a3b8 !important; }
+    html.dark .border-slate-200 { border-color: #334155 !important; }
+    html.dark .border-slate-200\/70 { border-color: rgba(51, 65, 85, 0.7) !important; }
+    html.dark .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.5) !important; }
+    html.dark .bg-slate-50 { background-color: #0f172a !important; }
+
+    html.dark .glass {
+      background: rgba(15, 23, 42, 0.85) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    html.dark .bg-auth {
+      background:
+        radial-gradient(circle at 12% 10%, rgba(255, 107, 74, 0.15), transparent 26%),
+        radial-gradient(circle at 88% 14%, rgba(15, 118, 110, 0.15), transparent 24%),
+        radial-gradient(circle at 50% 110%, rgba(245, 158, 11, 0.1), transparent 30%),
+        linear-gradient(180deg, #0f172a 0%, #1e293b 40%, #0f172a 100%) !important;
+    }
+
+    html.dark input:-webkit-autofill,
+    html.dark input:-webkit-autofill:hover,
+    html.dark input:-webkit-autofill:focus {
+      -webkit-text-fill-color: #f8fafc !important;
+      box-shadow: 0 0 0px 1000px #1e293b inset !important;
+    }
+
+    html.dark body {
+      color: #f8fafc !important;
+    }
   </style>
 </head>
   <body class="bg-auth min-h-screen text-slate-900">
@@ -140,7 +179,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <script type="text/babel">
-    const { useMemo, useRef, useState } = React;
+    const { useMemo, useRef, useState, useEffect } = React;
 
     const steps = [
       { id: 0, label: "Create" },
@@ -307,6 +346,24 @@
     }
 
     function App() {
+      const [darkMode, setDarkMode] = useState(() => {
+        if (typeof window !== "undefined") {
+          return localStorage.getItem("theme") === "dark" || 
+            (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        }
+        return false;
+      });
+
+      useEffect(() => {
+        if (darkMode) {
+          document.documentElement.classList.add("dark");
+          localStorage.setItem("theme", "dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+          localStorage.setItem("theme", "light");
+        }
+      }, [darkMode]);
+
       const [step, setStep] = useState(1);
       const [loading, setLoading] = useState(false);
       const [errors, setErrors] = useState({});
@@ -685,6 +742,9 @@
                   <h1 className="mt-1 font-['Fraunces'] text-2xl font-semibold text-slate-950 md:text-3xl">Secure Access Studio</h1>
                 </div>
                 <div className="mobile-stack flex items-center gap-2">
+                  <button onClick={() => setDarkMode(!darkMode)} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm sm:w-auto transition">
+                    {darkMode ? "Light Mode ☀️" : "Dark Mode 🌙"}
+                  </button>
                   {isAdmin && <button onClick={openUsersModal} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm sm:w-auto">Admin Panel</button>}
                   {tokens.access && <button onClick={onLogout} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm sm:w-auto">Logout</button>}
                   <a href="/docs" className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center text-xs text-slate-700 shadow-sm sm:w-auto">API</a>
